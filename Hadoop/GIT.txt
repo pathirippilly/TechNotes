@@ -472,6 +472,17 @@ we will get the difference between last commited point (HEAD) and current uncomm
 
 git difftool will give more clear differences since it will open in p4merge
 
+SPECIAL NOTE:
+
+git diff will show the difference between your workspace and the index. (the index is where the staged files live)
+
+This may not seem obvious because we usually use git diff to see the changes in the workspace vs what is checked in. 
+However, technically git diff shows workspace vs index, and if you haven't added changes to the index, then the index matches what you checked out.
+
+to see workspace vs repo:  git diff HEAD
+to see index vs repos: git diff --cached (can also use --staged)
+to see workspace vs index:  git diff
+
 
 BRANCHING AND MERGING
 ******************************
@@ -625,6 +636,264 @@ Now if we delete the branch 'updates' also, this not going affect the time line,
 For deleting the branch :
 
 git branch -d updates
+
+Resolving conflicts
+*******************
+
+scenario 1:
+
+
+
+Say I have checkout in to a new branch called "trouble"
+
+git checkout -b trouble
+
+Now I am making some changes to README.md and commiting the changes there
+
+Now I am switching back to master :
+
+git checkout master
+
+Here I am making some other changes to the file
+
+Now If I tried to merge the the trouble branch from  master branch without commiting:
+
+
+git merge trouble
+
+I will get the below error :
+
+error: Your local changes to the following files would be overwritten by merge:
+        README.md
+Please commit your changes or stash them before you merge.
+Aborting
+Updating 49781fc..7e72b5f
+
+
+So now If I commit the changes on master:
+
+git commit -am "commiting README.md"
+
+And now retry the merge:
+
+git merge trouble
+
+this will put you into a merging state saying :
+
+Auto-merging README.md
+CONFLICT (content): Merge conflict in README.md
+Automatic merge failed; fix conflicts and then commit the result.
+
+Now I will be in a merging  state '(master|MERGING)'
+
+Now we need to fix the conflicts.For that we need to launch our merge tool (p4merge):
+
+git mergetool
+
+Now p4merge will open with three states of file:
+
+1.The last  committed file before making changes on branch or master
+2.branch committed file
+3. master committed file
+
+we can now choose which all changes to retain and which all to exclude.
+once you select it, save the changes on merge p4merge and exit
+
+Now you need to commit all changes by saying :
+
+git commit -m "saving changes"
+
+Note: There will be .orig files created for all conflicted files. We can add that to .gitignore as *.orig to exclude it from 
+tracking by git
+
+TAGS
+*******
+
+tags are the labels representing commit points.
+
+There are two types of tags 
+
+1. Light Weighted Tags
+2. Annotated Tags
+
+Light Weighted tags :
+
+creation:
+
+git tag <tag_name>
+
+listing tags :
+
+git tag --list
+
+deletion:
+
+git tag -d <tag_name>
+
+Annotated Tags:
+
+creation:
+
+git tag -a <tag_name> -m "message"
+
+if we do : git show <tag_name>
+
+This will list 
+
+Author of the tag
+data and time
+commit message 
+and other commit informations
+
+STASHING
+**********
+
+Suppose you are implementing a new feature for your product. Your code is in progress and suddenly a customer escalation comes. Because of this, 
+you have to keep aside your new feature work for a few hours. You cannot commit your partial code and also cannot throw away your changes.
+ So you need some temporary space, where you can store your partial changes and later on commit it.
+
+In Git, the stash operation takes your modified tracked files, stages changes, and saves them on a stack of unfinished changes that you can reapply at any time.
+
+Creation of stash:
+
+git stash
+
+listing stash :
+
+git stash list
+
+getting back the stashed changes:
+
+git stash pop 
+
+once you get back the stashed changes , git status will show the changes and you can commit the same
+
+Time Travel with reset and reflog:
+*********************************
+
+If you want to roll back your version to a certaing commit point , you can use 'git reset'
+There are three types of reset:
+
+1. Soft 
+2. Mixed
+3. Hard
+
+SOFT RESET:
+
+git reset <commit_id> --soft
+
+It will just re point HEAD marker to the mentioned commit point.
+So even if we roll back to an old commit point, it will preserve 
+the git staging area and workind directory
+
+example:
+making some changes to README.md
+now doing a git status will show the message saying changes need to be staged for commit
+Now do a git hist:
+
+git hist
+
+output:
+
+* 3ea2c84 (HEAD -> master) changes for stash test
+*   eac6ac7 (tag: v1.0) commiting changes
+|\
+| * eb72ba1 adding another conflict for commit
+* | b57c89f commiting local changes
+|/
+*   c041e5f merging master to branch
+|\
+| *   ed0e7ba Merge branch 'truoble' Adding chnages to .gitignore for excluding .orig files and commiting changes to README.md
+| |\
+| * | 45f68a9 commiting conflicts from master
+* | | 290c977 commiting branch conflict
+| |/
+|/|
+* | 7e72b5f adding nppBackup to gitignore amd also commiting README.md new changes
+|/
+* 49781fc adding updates from branch
+* 60cb354 included logs directory from .gitignore file
+* 1eedf6b excluded iogs directory from .gitignore file
+* 07fa091 adding .gitignore
+* 3deb6c7 deleting test.txt
+* e82daa2 committing both new file and renamed file
+* 3259c30 committing the deleted file
+* 25c46fe committing the renamed file
+* 2b0800e Testing express commit
+* 0d0d1f8 This is a test commit for multiple changes at a time
+* b354b33 first file in demo repo
+
+say now we are rolling back to commit point : 49781fc
+
+git reset 49781fc --soft
+
+now git hist will give you :
+
+*   eac6ac7 (tag: v1.0) commiting changes
+|\
+| * eb72ba1 adding another conflict for commit
+* | b57c89f commiting local changes
+|/
+*   c041e5f merging master to branch
+|\
+| *   ed0e7ba Merge branch 'truoble' Adding chnages to .gitignore for excluding .orig files and commiting changes to README.md
+| |\
+| * | 45f68a9 commiting conflicts from master
+* | | 290c977 commiting branch conflict
+| |/
+|/|
+* | 7e72b5f adding nppBackup to gitignore amd also commiting README.md new changes
+|/
+* 49781fc (HEAD -> master) adding updates from branch
+* 60cb354 included logs directory from .gitignore file
+* 1eedf6b excluded iogs directory from .gitignore file
+* 07fa091 adding .gitignore
+* 3deb6c7 deleting test.txt
+* e82daa2 committing both new file and renamed file
+* 3259c30 committing the deleted file
+* 25c46fe committing the renamed file
+* 2b0800e Testing express commit
+* 0d0d1f8 This is a test commit for multiple changes at a time
+* b354b33 first file in demo repo
+
+here we can see that HEAD is pointing to 49781fc.
+
+Not only that it will preserve all the changes of this commit point in staging area as well as all the changes 
+that we have rolled back in "Changes not staged for commit". You can see this by git status as below:
+
+On branch master
+Changes to be committed:
+  (use "git reset HEAD <file>..." to unstage)
+
+        modified:   .gitignore
+        modified:   README.md
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git checkout -- <file>..." to discard changes in working directory)
+
+        modified:   README.md
+		
+from here we can even again go back to original commit point from where we came
+
+https://stackoverflow.com/questions/3528245/whats-the-difference-between-git-reset-mixed-soft-and-hard
+
+MIXED RESET:
+
+git reset <commit_id> --mixed
+
+Here it will modify the index. It means , it will unstage the changes of that commit point
+
+
+HARD RESET:
+
+git reset <commit_id> --hard
+
+This will modify the working directory
+
+
+
+
 
 
 
