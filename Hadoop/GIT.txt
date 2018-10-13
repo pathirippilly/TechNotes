@@ -892,8 +892,41 @@ git reset <commit_id> --hard
 This will modify the working directory
 
 
+REMOTE REPOSITORY: GIT HUB
+**************************
+1. create a git hub account and set up your profile
+2. Create a repository to begin say 'demo'
+3. Now you will be able to see a section for "PUSH an existing repository from commad line".
+Youn can see two commands similar as of  below :
+
+git remote add origin https://github.com/pathirippilly/demo.git
+git push -u origin master
+
+4.To Begin with , we need to link  the local repository with the one in Git-Hub.Open Git bash 
+> Navigate to your local repository > Type below command to link your local repo to git repo
+
+git remote add origin https://github.com/pathirippilly/demo.git
+
+here 'origin'  is the reference name to remote repo URL. You can give any other name
+
+Now if you want to see what all remote repositories are linked to your local respository:
+
+git remote -v
+
+5.Push your changes of local respository to remote as :
+git push -u origin master --tags
+
+origin : this is the repository to which you are pushing
+master : this is the local repository branch from which you are pushing
+
+--tags : this option will include all your tags while pushing
+
+-u : this will set up a tracking branch relationship between master branch in the remote repository and master branch in the local repository
+This is required only for the first time push
 
 
+
+ 
 
 
 
