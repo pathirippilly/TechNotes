@@ -1,0 +1,43 @@
+1. In Python3 print is a function while in python2 its a statement
+2. In Python3 integer division still gives you float while in python2 it gives only integer
+1/2 = 0.5 in python3
+1/2 = 0 in python2, instead you need to use 1/2.0
+
+Integer division in Python3 is achieved by '//'
+
+eg:
+1//2 = 0 in python3
+
+3. In Python3 map and filter returns respective objects  which is not iterable  while in Python2 they returns list 
+
+itertools
+*********
+groupby(iterable,key)
+	:
+	sub-iterators grouped by value of key(v)
+
+This will return a iterable groupby object
+each element is tuple with key as first element and iterable grouper object as second element
+elements of iterable grouper object are nothing but elements of the input iterable, having this key in it
+
+filterfalse(predicate,sequenece):
+
+This will return all elements from sequence untill predicate is false
+OR
+elements of sequence where predicate is false
+
+predicate is usually a lambda function with some condition 
+Syntax  looks similar to filter() but exactly opposite in functioning
+
+starmap(func, seq):
+The starmap tool will create an iterator that can compute using the function and iterable provided. As the documentation mentions, 
+“the difference between map() and starmap() parallels the distinction between function(a,b) and function(*c).
+
+example:
+def add(a, b):
+	return a+b
+
+for item in starmap(add, [(2,3), (4,5)]):
+	print(item)
+
+
