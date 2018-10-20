@@ -10,9 +10,35 @@ eg:
 
 3. In Python3 map and filter returns respective objects  which is not iterable  while in Python2 they returns list 
 
-itertools
-*********
+4.Generic custome map,reduce,filter functions:
+
+Structure of generic filter,map and reduce is as below:
+
+def myFilter(c,f):
+    newC=[]
+    for i in c:
+        if f(i):
+            newC.append(i)
+    return newC
+	
+def myMapper(c,f):
+    newC=[]
+    for i in c:
+        newC.append(f(i))
+    return newC
+	
+def myReducer(c,f):
+    t = c[0]
+    for i in c[1:]:
+        t=f(t,i)
+    return t
+
+
+
+5. itertools:
+
 groupby(iterable,key)
+********************
 	:
 	sub-iterators grouped by value of key(v)
 
@@ -20,7 +46,10 @@ This will return a iterable groupby object
 each element is tuple with key as first element and iterable grouper object as second element
 elements of iterable grouper object are nothing but elements of the input iterable, having this key in it
 
+groupby always follows sorting, otherwise it won't function as expected
+
 filterfalse(predicate,sequenece):
+************************************
 
 This will return all elements from sequence untill predicate is false
 OR
@@ -30,6 +59,8 @@ predicate is usually a lambda function with some condition
 Syntax  looks similar to filter() but exactly opposite in functioning
 
 starmap(func, seq):
+******************
+
 The starmap tool will create an iterator that can compute using the function and iterable provided. As the documentation mentions, 
 “the difference between map() and starmap() parallels the distinction between function(a,b) and function(*c).
 
@@ -39,5 +70,151 @@ def add(a, b):
 
 for item in starmap(add, [(2,3), (4,5)]):
 	print(item)
+
+6.Numpy:
+**********
+This is a Linear Algebra library for Python
+
+Numpy arrays essentially come in two flavours:
+Vectors and Matrices
+Vectors are 1d (1-Dimensional) and matrices are 2d - 2dimensional
+
+1. importing numpy:
+
+import numpy as np
+
+2. Creating a numpy array:
+
+>>from a normal list:
+
+np.array([1,2,3]) #1d array
+np.array([1,2,3],[4,5,6],[7,8,9]) #2d array
+
+>>using np.arange(start,stop,step):
+
+stop is the only mandatory argument
+start is 0 by default and step is 1 by default
+
+np.arange(10) #print 0 to 9 numbers increment by 1
+
+np.arange(1,11,2) #print numbers from 1 to 11 increment by 2
+
+>>creating empty arrays initialized with zeros and ones:
+
+np.zeros(10) #This will create a 1d numpy array of 10 rows and columns of each element initialized with zeros
+np.zeros_like(10) #this will create a 1d array with a single element of value 0 
+
+np.zeros((10,10)) #This will create a 2d numpy array of length 10 of each element initialized with zeros
+np.zeros_like((10,10)) #this will create a 2d array with a single element of value 0 
+
+np.ones(10) #This will create a 1d numpy array of  10 of each element initialized with zeros
+np.oneslike(10) #this will create a 1d array with a single element of value 1
+
+np.ones((10,10)) #This will create a 2d numpy array of 10 rows and columns of each element initialized with zeros
+np.oneslike((10,10)) #this will create a 1d array with two  elements of value 1
+
+>>creating evenly spaced numpy array:
+
+np.linspace(0,10,10) # this will create a numpy array of 10 elements from 0 to 10 which are evenly spaced points
+
+>>creating an identity matrix:
+identity matrix is the 2d matrix with all diagonal elements as 1 and rest as zeros
+
+np.eye(10) # this will create 10x10 identity matrix
+
+>>creating random numpy array:
+
+np.random.randint(0,10,(5,2)) # this will create 5x2 matrix of random integers between 0 and 10 as elements
+np.random.rand(5,2) # this will create a  create 5x2 matrix of random numbers of type float  between 0 and 1
+np.random.randn(5,2) # this will create a  create 5x2 matrix of random numbers of type float  between -1 and 1
+
+3.Array Manipulation
+
+>>reshaping the size of an array :
+
+say you have a 5x2 array as below:
+
+np_rand=np.random.randint(0,10,(5,2))
+
+now you can reshape it into 2x5 as below:
+np_rand.reshape((2x5))
+
+>>Finding the shape:
+np_rand.shape
+
+>>finding the data type:
+np_rand.dtype()
+
+4. Performing aggregations:
+say you have a 5x2 array as below:
+
+np_rand=np.random.randint(0,10,(5,2))
+
+np_rand.max() # this will give you the max element of the array
+np_rand.min() # this will give you the min element of the array
+
+
+np_rand.argmax()# this will give you the index of  max element of the array
+np_rand.argmin()# this will give you the index of min element of the array
+
+5.numpy array can do normal slicing and indexing as of any python list
+
+6.numpy array v/s Python List:
+
+>>Broadcasting a value to array:
+We can Broadcast any single value to a slice  in numpy array unlike regular python list:
+
+np_rand[1:5] = 352
+
+	
+
+6.Pandas :
+
+Confuring Pandas
+******************
+
+Pandas can be installed using pip or pip3 as below:
+
+pip3 install pandas
+
+once installed you need to add the path of the package in Pycharm to make the Pycharm  recogonize the package
+To find the package path:
+
+pip show <package name>
+
+example:
+
+pip show pandas
+
+
+output is :
+
+Name: pandas
+Version: 0.23.4
+Summary: Powerful data structures for data analysis, time series, and statistics
+Home-page: http://pandas.pydata.org
+Author: None
+Author-email: None
+License: BSD
+Location: c:\users\wwwpa\appdata\local\programs\python\python37\lib\site-packages
+Requires: python-dateutil, numpy, pytz
+Required-by:
+
+
+Copy the path describe in Location and paste it in below section of Pycharm:
+
+File > Settings > Project > Project interpretor > select your project > click on settings icon near to project interpretor dropdown>
+click on 'show all' >  click on icon "show paths for the selected interpretor" > Add your path > click ok 
+
+Read data from a file into Pandas
+************************************
+
+
+
+
+
+ 
+
+
 
 
