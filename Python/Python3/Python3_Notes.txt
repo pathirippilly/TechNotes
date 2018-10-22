@@ -166,7 +166,79 @@ We can Broadcast any single value to a slice  in numpy array unlike regular pyth
 
 np_rand[1:5] = 352
 
-	
+But lets take the below case:
+a = np.arange(0,10) # this will generate the array of numbers from 0 to 9
+Now let's  we take  a slice of it and store it in another variable
+b=a[:5]
+unlike to a regular list , this is only a reference both b and a[:5] points to same object memory, that is 'a'
+so if we make any changes to 'b' , it will affect a also. But in case of list , slice of a list means new object,not a reference.
+>>Indexing a 2d array
+unlike to a list , we can index a 2d numpy array as follows:
+Say we have below 2d array:
+
+ar1=np.array([[1,2,3,4],[5,6,7,8],[1,2,3,4]) 
+
+Now we need to access the 1st row , 2nd element. We can do  
+
+ar1[0][1] #similar to any 2d list
+
+OR
+
+ar[0,1]#specific for a numpy array
+
+>> slicing a 2d numpy array
+
+Say we have a 2d array ar1  as below:
+array([[1, 2, 3, 4],
+       [5, 6, 7, 8],
+       [1, 2, 3, 4]])
+Now to get the below slice:
+
+array([[2, 3],
+       [6, 7]])
+	   
+we need to apply below slicing:
+
+ar1[:2,1:3]
+
+>> Creating a boolean array to apply filter
+unlike to a regular list, we can create a boolean numpy array as output of a numpy array
+lets say 
+
+arr=np.arange(10) # this will make a 1d numpy array of elements from 0 to 9
+if we say arr<5 or print(arr<5), this will give below output:
+
+array([ True,  True,  True,  True,  True, False, False, False, False,
+       False])
+Now we can pass the same output to arr and get the records filtered out :
+arr[arr<5] # this will create a new numpy array object with all elements less than 5
+
+
+7.Numpy Operations
+
+Performing arithmetic with a nummpy array is easy:
+
+say arr=array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+
+arr * arr will give you a new array of multiples of each elements
+arr / arr will give you a new array of quotients of division of each elements
+arr + arr will give you a new array of sum of each elements
+arr - arr will give you a new array of take away values of each elements
+arr ** 2 will give you exponents
+
+
+Note:
+if we have some non permissible arithmetics such as "divided by zero" , Numpy will throw 
+a warning instead of error and give  the output as 'nan'
+
+eg:
+arr/arr :
+
+RuntimeWarning: invalid value encountered in true_divide
+
+array([nan,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.])
+
+ 
 
 6.Pandas :
 
@@ -211,10 +283,7 @@ Read data from a file into Pandas
 
 
 
-
-
  
-
 
 
 
