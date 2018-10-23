@@ -37,8 +37,8 @@ def myReducer(c,f):
 
 5. itertools:
 
-groupby(iterable,key)
-********************
+>>groupby(iterable,key)
+
 	:
 	sub-iterators grouped by value of key(v)
 
@@ -48,8 +48,8 @@ elements of iterable grouper object are nothing but elements of the input iterab
 
 groupby always follows sorting, otherwise it won't function as expected
 
-filterfalse(predicate,sequenece):
-************************************
+>>filterfalse(predicate,sequenece):
+
 
 This will return all elements from sequence untill predicate is false
 OR
@@ -58,8 +58,8 @@ elements of sequence where predicate is false
 predicate is usually a lambda function with some condition 
 Syntax  looks similar to filter() but exactly opposite in functioning
 
-starmap(func, seq):
-******************
+>>starmap(func, seq):
+
 
 The starmap tool will create an iterator that can compute using the function and iterable provided. As the documentation mentions, 
 “the difference between map() and starmap() parallels the distinction between function(a,b) and function(*c).
@@ -79,11 +79,11 @@ Numpy arrays essentially come in two flavours:
 Vectors and Matrices
 Vectors are 1d (1-Dimensional) and matrices are 2d - 2dimensional
 
-1. importing numpy:
+a. importing numpy:
 
 import numpy as np
 
-2. Creating a numpy array:
+b. Creating a numpy array:
 
 >>from a normal list:
 
@@ -128,7 +128,7 @@ np.random.randint(0,10,(5,2)) # this will create 5x2 matrix of random integers b
 np.random.rand(5,2) # this will create a  create 5x2 matrix of random numbers of type float  between 0 and 1
 np.random.randn(5,2) # this will create a  create 5x2 matrix of random numbers of type float  between -1 and 1
 
-3.Array Manipulation
+c.Array Manipulation
 
 >>reshaping the size of an array :
 
@@ -145,7 +145,7 @@ np_rand.shape
 >>finding the data type:
 np_rand.dtype()
 
-4. Performing aggregations:
+d. Performing aggregations:
 say you have a 5x2 array as below:
 
 np_rand=np.random.randint(0,10,(5,2))
@@ -157,9 +157,9 @@ np_rand.min() # this will give you the min element of the array
 np_rand.argmax()# this will give you the index of  max element of the array
 np_rand.argmin()# this will give you the index of min element of the array
 
-5.numpy array can do normal slicing and indexing as of any python list
+e.numpy array can do normal slicing and indexing as of any python list
 
-6.numpy array v/s Python List:
+f.numpy array v/s Python List:
 
 >>Broadcasting a value to array:
 We can Broadcast any single value to a slice  in numpy array unlike regular python list:
@@ -214,7 +214,7 @@ Now we can pass the same output to arr and get the records filtered out :
 arr[arr<5] # this will create a new numpy array object with all elements less than 5
 
 
-7.Numpy Operations
+g.Numpy Operations
 
 Performing arithmetic with a nummpy array is easy:
 
@@ -242,8 +242,8 @@ array([nan,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.])
 
 6.Pandas :
 
-Confuring Pandas
-******************
+>>Confuring Pandas
+
 
 Pandas can be installed using pip or pip3 as below:
 
@@ -278,10 +278,193 @@ Copy the path describe in Location and paste it in below section of Pycharm:
 File > Settings > Project > Project interpretor > select your project > click on settings icon near to project interpretor dropdown>
 click on 'show all' >  click on icon "show paths for the selected interpretor" > Add your path > click ok 
 
-Read data from a file into Pandas
-************************************
+>>Pandas.Series :
+
+one-dimensional labeled array capable of holding data of any type (integer, string, float, python objects, etc.). 
+The axis labels are collectively called index.
+
+Syntax:
+pandas.Series( data, index, dtype, copy)
+
+Here Data can be any type of collections,constants or even it can be an object (including functions)
+
+Index values must be unique and hashable, same length as data. Default np.arrange(n) if no index is passed.
+
+dtype is for data type. If None, data type will be inferred
+
+Copy data. Default False
 
 
+Example:
+
+import numpy as np
+import pandas as pd
+
+l=['á','b','c','d']
+t=(1,2,3,4)
+narr=np.array((1,2,3,4))
+d={1:'a',2:'b',3:'c',4:'d'}
+
+pd.Series(l) # here data = t
+
+output:
+0    á
+1    b
+2    c
+3    d
+dtype: object
+
+pd.Series(l,t) # here data = t and index = l
+
+output:
+1    á
+2    b
+3    c
+4    d
+dtype: object
+
+pd.Series(l,narr) # here data = t and index = narr
+
+output:
+Out[9]:
+1    á
+2    b
+3    c
+4    d
+dtype: object
+
+pd.Series(d) # here index is the key and data is the value for dictionary
+`
+1    a
+2    b
+3    c
+4    d
+dtype: object
+
+>>Pandas.Dataframes :
+
+A Data frame is a two-dimensional data structure, i.e., data is aligned in a tabular fashion in rows and columns.
+
+Features of DataFrame:
+
+Potentially columns are of different types
+Size – Mutable
+Labeled axes (rows and columns)
+Can Perform Arithmetic operations on rows and columns
+
+Create a DataFrame:
+Syntax:
+
+pandas.DataFrame( data, index, columns, dtype, copy)
+
+data:
+data takes various forms like ndarray, series, map, lists, dict, constants and also another DataFrame.
+
+
+index:
+For the row labels, the Index to be used for the resulting frame is Optional Default np.arrange(n) if no index is passed.
+
+columns:
+For column labels, the optional default syntax is - np.arrange(n). This is only true if no index is passed.
+
+dtype:
+Data type of each column.
+
+copy:
+This command (or whatever it is) is used for copying of data, if the default is False.
+
+example:
+
+from numpy import random
+import pandas as pd
+
+df = pd.DataFrame(random.randint(0,10,(5,4)),columns=['col1','col2','col3','col4'],index=range(1,6))
+
+#output is a table like structure with 5 rows and 4 colums 
+#Rows are indexed from 1 to 5
+#Column names are explicitely given
+
+Accessing a Dataframe:
+
+Accessing a single column:
+
+df['col1'] 
+
+note: if we check the output data type of every single column display,  we will get as padas.core.series.Series
+
+accessing multiple columns:
+df[['col1','col2']]
+
+note: if we check the output data type of every multiple  column display,  we will get as padas.core.frame.DataFrame	
+
+Accessing a Row:
+ df.loc[index_name]
+example:
+df.loc[3] # this will return a series containig all all column values for index=3
+
+OR
+
+df.iloc[index_position]
+
+Index position is the position of that particular row starting from very first row.First row of 
+every pandas Dataframe is having a position value (or index location value) of 0 . So of I need to 
+access 3rd row:
+df.iloc[2] # this will pick the 3rd row 
+
+
+Accessing multiple rows:
+df.loc[[3,4]] # this will return a series containig all all column values for index=3 and index=4
+
+OR
+
+df.iloc[[2,3]] # this will pick 3rd and 4th row
+
+Accessing a particular value:
+
+A particular value can also be accessed by using df.loc
+Say I need to access value in 1st row (assuming index=1) and 1st column (assuming column name is 'col1'):
+
+df.loc[1,'col1']
+
+OR
+
+df.iloc[0,0]
+
+If I need to access value in 1st and 2nd (index =  [1,2]) row as well as 1st and 2nd column ['col1','col2']
+
+df.loc[[1,2],['col1','col2']]
+
+OR
+
+df.iloc[[0,1],[0,1]]
+
+
+
+Inserting a New Column:
+
+We can simply create a new column by assigning values like this
+
+df['col5'] = range(0,5)
+
+OR
+
+df['col5'] = df['col4'] + df['col3']
+
+Here 'col5' is newly created with assigned value
+
+Droping a column/Row:
+
+Drop a column:
+
+To drop a column we need to explicitly mention 'axis=1' and 'inplace=True' . Because
+by default,axis is '0',means pointing to indexes (Rows) and inplace is 'False' means , existing df won't be affcted instead new modified
+dataframe object will be created.
+
+df.drop('col5',axis=1,inplace=True)
+
+Drop a Row:
+
+df.drop([1,2],inplace=True)
 
  
 
