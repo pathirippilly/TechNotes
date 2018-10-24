@@ -466,6 +466,56 @@ Drop a Row:
 
 df.drop([1,2],inplace=True)
 
+>>Conditional Selection
+
+Say we have created a dataframe as below:
+
+from numpy import random
+import pandas as pd
+
+df=pd.DataFrame(random.randint(0,10,(5,4)),columns=['col1','col2','col3','col4'],index=range(1,6))
+
+Now if say:
+
+df > 2
+
+this will result in a boolean Dataframe where all column values which are greater than 2 will have true as value and all others will have false
+
+Now if we pass this to df itself as below:
+
+df[df>2]
+
+this will result in a dataframe with all column values which are greater than 2 will be displayed as it is and other will be displayed as 'NaN'
+
+But usually we do filters specifically on column basis.If I say more specifically, we need to filter all 'col4' values greater than 2,then we will say:
+
+df[df['col4']>2]
+
+If need two conditions to be satisfied, say , col4 and col3 values greater than 2, we wiil say:
+
+df[(df['col4']>2) & (df['col3']>2)]
+
+>>Set and Reset index
+
+By default when a pandas dataframe is created , we will have a default index column as defined by range(0,n-1), where n is the total number of rows
+
+We can specify the index at the time of creation of dataframe as follows:
+
+df=pd.DataFrame(random.randint(0,10,(5,4)),columns=['col1','col2','col3','col4'],index=range(1,6))
+
+But if we do like this , we don't have name for this index column. So to set the name , we do as follows:
+
+df.index.name='slno'
+
+We can also reset the index as follows:
+
+df.reset_index(inplace=True) #if inplace is not sepcified, it will create a new object with reset index
+
+we can set the index also in following way:
+
+df.set_index('slno',inplace=True)
+
+
  
 
 
