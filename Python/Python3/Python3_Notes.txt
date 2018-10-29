@@ -515,8 +515,72 @@ we can set the index also in following way:
 
 df.set_index('slno',inplace=True)
 
+>>Multi Index:
 
- 
+Creating Multi Index:
+Method 1:
+
+pd.MultiIndex() is used for creating a multi level index.Mandatory arguments are 
+levels=We need to pass collections of values as levels (whcih we are considering as index)
+labels= Labels are the positions to which each values will go
+
+optional, but required argument is :
+
+names: names of the index columns
+
+example:
+
+key1=['A','B']
+key2=[1,2,3]
+multi_index=pd.MultiIndex([key1,key2],[[0,0,0,1,1,1],[0,1,2,0,1,2]],names=['key1','key2'])
+
+method2:
+MultiIndex can be created more easily using methods in MultiIndex class of pandas
+
+One of the usual method is 
+
+MultiIndex.from_tuples(list_of_tuples) # here input is list of tuples in which each tuple represent the combination of column values
+which are considered for indexing
+
+example:
+
+key1=['A','A','A','B','B','B']
+key2=[1,2,3,1,2,3]
+t=list(zip(key1,key2)) # here key1 and key2 are considered for making index
+multi_index=pd.MultiIndex.from_tuples(t) 
+
+
+Using MultiIndex while creating a DataFrame:
+
+df=pd.DataFrame(randn(6,2),index=multi_index,columns=['col1','col2'])
+
+Accessing a multiIndex:
+
+MultiIndex can be accessed as same as normal index using DataFrame.loc() or DataFrame.iloc() method
+The difference is that , you need to access level by level 
+
+Example:
+to access all records of index key1='A', yiu need to say:
+df.loc['A'] 
+
+to access exactly first row :
+
+df.loc['A'].loc[1]
+
+OR 
+
+df.iloc[0]
+
+
+MultiIndex can also be accessed using DataFrame.xs(). This is particularly usefull when
+you need to skip one or more level of index and reach out to next.
+
+example:
+
+to access 1st record in key2 index column for every key1 value:
+
+df.xs[1,level='key2'] 
+
 
 
 
