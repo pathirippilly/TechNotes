@@ -560,7 +560,7 @@ MultiIndex can be accessed as same as normal index using DataFrame.loc() or Data
 The difference is that , you need to access level by level 
 
 Example:
-to access all records of index key1='A', yiu need to say:
+to access all records of index key1='A', you need to say:
 df.loc['A'] 
 
 to access exactly first row :
@@ -581,6 +581,75 @@ to access 1st record in key2 index column for every key1 value:
 
 df.xs[1,level='key2'] 
 
+>>Handling missing data
+
+dropping null value data :
 
 
+df.dropna() : This will drop all rows with np.NaN values
 
+df.dropna(axis=1) : This will drop all columns with np.NaN values
+
+df.dropna(thresh=2) : This will retain all rows with minimum 2 non np.NaN values and drop others
+
+filling null values:
+
+df.fillna(value=0): This will fill all null values with 0
+
+>>Group By and aggregate functions over a dataframe
+
+We can perform SQL similar Group By using DataFame.groupby()
+
+Say we have below Dataframe created:
+
+df=pd.DataFrame({'company':['GOOG','GOOG','MSFT','MSFT','FB','FB'],
+                 'year':['2017','2018','2017','2018','2017','2018'],'sales':[200,230,211,222,215,235]})
+				 
+we are going to calculate total sales per company as follows:
+
+total_sales=df.groupby('company')['sales'].sum() # this will groupby over company and gives sum of sales over it
+
+>>Concatenate , Merge and Join:
+
+pd.concat():
+
+This will concatenate two Dataframes
+
+Syntax with some important arguments:
+
+pd.concat(objs,axis=0,join='outer',sort=None)
+
+objs:
+We can pass the dataframes to be concatenated  here as a collections
+
+axis:
+As any other DataFame method arguments, axis is by default points to 0,means indices
+To set this to column level, we need to set axis=1
+
+join:
+Here its asking for what type of join to be performed. We have 'inner' and 'outer', by default it is 'outer'.
+
+example:
+
+lets create a DataFame first :
+
+yealry_sum1 = {'year':[2005,2006,2007,2008],'total_sales(Millions)':[238,256,274,325]}
+yealry_sum2 = {'year':[2007,2008,2009,2010,2010],'total_sales(Millions)':[273,324,336,368,368]}
+
+df1=pd.DataFrame(yealry_sum1,index=[1,2,3,4])
+df2=pd.DataFrame(yealry_sum2,index=[0,1,2,3,4])
+
+Below line of code will concatenate df1 and df2 vertically (axis=0):
+
+pd.concat([df1,df2])
+
+Below line of code will concatenate df1 and df2 horizontally, based on index columns (axis=1) with an outer join:
+
+pd.concat([df1,df2],axis=1,join='outer')
+
+Below line of code will concatenate df1 and df2 horizontally, based on index columns (axis=1) with an inner  join:
+
+pd.merge() or DataFrame.merge():
+
+This is similar to join operation in SQL
+                                                    

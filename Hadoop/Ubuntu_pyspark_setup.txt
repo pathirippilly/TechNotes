@@ -39,6 +39,9 @@ export PYSPARK_PYTHONPATH=python3
 export JAVA_HOME="/usr/lib/jvm/java-1.8.0-openjdk-amd64"
 export PATH=$SPARK_HOME:$PATH:~/.local/bin:$JAVA_HOME/bin:$JAVA_HOME/jre/bin
 
+Note: If you have two version of spark, you can set 
+export SPARK_MAJOR_VERSION=2
+
 
 
 
