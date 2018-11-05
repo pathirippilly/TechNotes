@@ -20,7 +20,7 @@ All that you are going to do with Apache Spark is:
 Spark can store data in any of the below different objects
 
 RDD : Resilient Distributed Dataset
-DataFrames
+DataFrames	
 DataSets
 
 From spark 2.x , it is recommended to use DataFrames and Datasets than RDD
