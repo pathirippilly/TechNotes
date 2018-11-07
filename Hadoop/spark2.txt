@@ -101,5 +101,116 @@ ordersDict.toDF()
 
 
 
+>>Creating DF from files
+
+from json file
+***************
+
+df=spark.read.json(path_to_json):
+
+This will infer the schema automatically
+
+example: 
+df=spark.read.json("/public/retail_db_json/order_items")
+
+
+3.Spark Configuration files
+
+this will be available in , cd /etc/spark2/conf
+
+There are two main config files
+
+a.spark-env.sh:
+
+This will having all environment variables such as executor memory,executor cores etc
+ 
+b.sparkDefault.config
+
+
+
+4.spark Data structure manipulation
+
+RECAP on RDD manipulation 
+******************************
+lets create an RDD from a list
+
+rdd=sc.parallelize(range(1,100001))
+
+Note:RDD.toDebugString() will give you the rdd lineage graph or DAG
+
+-> rdd.collect() # returns a list of all contents of rdd
+-> rdd.take(n) # returns a list of n elements of rdd
+-> rdd.filter(function) # similar to where clause in sql
+
+Transformation
+*******
+rdd.take(n) (#where n is  any positive integer) will result in list (so its an action) of contents od rdd
+rdd.filter(function) # filter is like where clause in SQL  
+rdd.map(function) #This is another transformation which will result in RDD.This is almost similar to map() of core python
+
+Action
+*******
+rdd.count() # this will give count of records in an RDD
+rdd.first(),rdd.reduce(function) will result in a single number
+
+
+5.spark performance tuning 
+
+>> RDD persitence 
+
+What is RDD Persistence and Caching in Spark?
+
+
+Spark RDD persistence is an optimization technique in which saves the result of RDD evaluation.
+Using this we save the intermediate result so that we can use it further if required. It reduces the computation overhead.
+We can make persisted RDD through cache() and persist() methods. 
+When we use the cache() method we can store all the RDD in-memory. 
+We can persist the RDD in memory and use it efficiently across parallel operations. 
+
+The difference between cache() and persist() is that using cache() the default storage level is MEMORY_ONLY 
+while using persist() we can use various storage levels (described below). It is a key tool for an interactive algorithm. 
+Because, when we persist RDD each node stores any partition of it that it computes in memory and makes it reusable for future use. 
+This process speeds up the further computation ten times.
+
+When the RDD is computed for the first time, it is kept in memory on the node. 
+The cache memory of the Spark is fault tolerant so whenever any partition of RDD is lost, 
+it can be recovered by transformation Operation that originally created it.
+
+
+In Spark, we can use some RDD’s multiple times. If honestly, we repeat the same process of RDD evaluation each time it required or brought into action. 
+This task can be time and memory consuming, especially for iterative algorithms that look at data multiple times. 
+To solve the problem of repeated computation the technique of persistence came into the picture.
+
+Using persist() we can use various storage levels to Store Persisted RDDs in Apache Spark. Let’s discuss each RDD storage level one by one-
+
+ 
+ 5. Storage levels of Persisted RDDs
+Using persist() we can use various storage levels to Store Persisted RDDs in Apache Spark. Let’s discuss each RDD storage level one by one-
+
+a. MEMORY_ONLY
+In this storage level, RDD is stored as deserialized Java object in the JVM. If the size of RDD is greater than memory, 
+It will not cache some partition and recompute them next time whenever needed. In this level the space used for storage 
+is very high, the CPU computation time is low, the data is stored in-memory. It does not make use of the disk.
+
+b. MEMORY_AND_DISK
+In this level, RDD is stored as deserialized Java object in the JVM. When the size of RDD is greater than the size of memory, 
+it stores the excess partition on the disk, and retrieve from disk whenever required. In this level the space used for storage is high, 
+the CPU computation time is medium, it makes use of both in-memory and on disk storage.
+
+c. MEMORY_ONLY_SER
+This level of Spark store the RDD as serialized Java object (one-byte array per partition). It is more space efficient as compared to deserialized objects, 
+especially when it uses fast serializer. But it increases the overhead on CPU. In this level the storage space is low, the CPU computation time is high and 
+the data is stored in-memory. It does not make use of the disk.
+
+d. MEMORY_AND_DISK_SER
+It is similar to MEMORY_ONLY_SER, but it drops the partition that does not fits into memory to disk, rather than recomputing each time it is needed. In this storage level, The space used for storage is low, the CPU computation time is high, it makes use of both in-memory and on disk storage.
+
+e. DISK_ONLY
+In this storage level, RDD is stored only on disk. The space used for storage is low, the CPU computation time is high and it makes use of on disk storage.
+
+
+
+
+
 
 

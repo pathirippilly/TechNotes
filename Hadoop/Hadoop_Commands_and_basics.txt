@@ -7,7 +7,7 @@ Main Property files:
 
 This file will be having fs.defaultFS property tag which will tell you the name node url and port
 
-2. /etc/hadoop/conf/hadoop-site.xml
+2. /etc/hadoop/conf/hdfs-site.xml
 
 This file will be having dfs.blocksize and dfs.replication
 dfs.block size is the block size of the node and dfs.replication gives you the replication factor of the node
@@ -53,7 +53,7 @@ hadoop fs -du -s -h /user/pathirippilly
 
 hdfs fsck /user/pathirippilly/crime -files -blocks -locations
 
-10.seting the replication factor for a folder (and its subfolders and files)
+10.setting the replication factor for a folder (and its subfolders and files)
 
 hadoop fs -setrep -R -w 3 <folder-path>
 
@@ -142,7 +142,7 @@ it should not have null values*/
 Note: 
 1. We usually uses split-by if there are no primary keys in the table and number of mappers should be greater than 1,if we explicitly specifies it.
    eventhough, some occasions , we may apply split-by even if primary keys are defined
-2. By Default split-by allows only numeric columns as value. But we can do split-by for a non-numeric column using -Dorg.apache.sqoop.splitter.allow_text_splitter=true
+2. By Default split-by allows only numeric columns as value. But we can do split-by for a non-numeric column using -D org.apache.sqoop.splitter.allow_text_splitter=true
 
 #splitting by a numeric column
 sqoop import -connect jdbc:mysql://ms.itversity.com:3306/retail_db --username retail_user --password itversity \
@@ -155,8 +155,8 @@ sqoop import \
 -Dorg.apache.sqoop.splitter.allow_text_splitter=true \
 -connect jdbc:mysql://ms.itversity.com:3306/retail_db --username retail_user --password itversity \
 --table orders \
---warehouse-dir /user/pathirippilly/sqoop_import/retail_db \
---num-mappers 4 \
+--warehouse-dir /user/pathirippilly/sqoop_import/retail_db_test \
+--num-mappers 1 \
 --split-by order_status 
 
 c. Different output file formats
