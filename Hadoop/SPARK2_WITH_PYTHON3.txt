@@ -1,0 +1,274 @@
+SPARK2 WITH PYTHON3
+************************
+
+RDD:
+
+
+Basic Transformations and Actions - 01 - map, flatMap, reduce and more
+***********************************************************************
+
+1.Creating an RDD from a collection (pyspark shell where sparkContext is imported as sc)
+
+l=range(1,100)
+rdd=sc.parallelize(l)
+
+2. Taking count from an rdd
+
+rdd.count()
+
+3. Applying a filter on rdd
+
+rdd.filter(function)
+
+example:
+l=range(1,100)
+lrdd=sc.parallelize(l)
+lrdd.filter(lambda x : x%2==0) # this will return rdd which is a factor of 2
+
+4.Applying a map on rdd
+
+l=range(1,10)
+lrdd=sc.parallelize(l)
+lrdd.map(lambda x : (x,x**2)) # this will return an rdd of tuples with 1 to 9 numbers and their square as pair
+
+5.Applying flatMap on rdd 
+ l = [['a','b','c'],['d','e','f']]
+ lrdd=sc.parallelize(l)
+ lrdd.flatMap(lambda x : x) # this will unpack the inner lists and output will be a single list.
+ 
+6.map() v/s flatMap()
+
+A map is a transformation operation in Apache Spark. It applies to each element of RDD and it returns the result as new RDD. 
+In the Map, operation developer can define his own custom business logic. The same logic will be applied to all the elements of RDD.
+Spark Map function takes one element as input process it according to custom code (specified by the developer) and returns one element at a time. 
+Map transforms an RDD of length N into another RDD of length N. The input and output RDDs will typically have the same number of records.Learn more on 
+
+A flatMap is a transformation operation. It applies to each element of RDD and it returns the result as new RDD. It is similar to Map, 
+but FlatMap allows returning 0, 1 or more elements from map function. 
+In the FlatMap operation, a developer can define his own custom business logic. The same logic will be applied to all the elements of the RDD.
+A FlatMap function takes one element as input process it according to custom code (specified by the developer) and returns 0 or more element at a time. 
+flatMap() transforms an RDD of length N into another RDD of length M.
+
+7.reduce()
+
+This is an action. It converts rdd to a single value by performing some aggregation
+
+l=range(1,10)
+lrdd=sc.parallelize(l)
+lrdd.reduce(lambda x,y : x+y) # this will give the sum of all numbers of rdd
+
+8.Converting a text file on HDFS into an RDD
+example:
+
+rdd=sc.textFile("/user/pathirippilly/sample_data_mr/wordCount.txt",5) # here first argument is manadatory which is nothing but path of the file
+and second argument is optional  which is number of partitions to be created
+
+
+8.reduceByKey()
+
+This is an action. It takes key value pairs as input and apply aggregation over a key
+
+example:
+Below is the word count program code where 
+
+a.First file is converted in to rdd with specified partitions using sc.textFile()
+b.Second words of each lines are splitted using flatMap()
+c.Key value pairs of each word and '1' are formed using map()
+d. And count of each words in the file are calculated using reduceByKey()
+
+rdd=sc.textFile("/user/pathirippilly/sample_data_mr/wordCount.txt",5) #a
+mappedrdd=rdd.flatMap(lambda x :x.split(" ")).map(lambda x :(x,1)) #b and c
+shuffledRDD=mappedrdd.reduceByKey(lambda x,y : x+y) #d
+
+9.groupByKey:
+
+When called on a dataset of (K, V) pairs, returns a dataset of (K, Iterable<V>) pairs. 
+Note: If you are grouping in order to perform an aggregation (such as a sum or average)
+over each key, using reduceByKey or aggregateByKey will yield much better performance. 
+Note: By default, the level of parallelism in the output depends on the number 
+of partitions of the parent RDD. You can pass an optional numPartitions argument 
+to set a different number of tasks.
+
+example:
+
+problem:
+Find total  revenue per order number from the orderitems data file
+
+orderitem file has following columns  seperated by comma as delimitter.
+
+item_no,order_item_order_id,product_id,qty_sold,order_item_subtotatl,price_per_qty
+
+Code:
+orderitems=sc.textFile("/public/retail_db/order_items") # OrderItems file has been read here 
+order_rev_pair=orderitems.map(lambda order : (int(order.split(",")[1]),float(order.split(",")[4]))) # Creating pairs of order_id and order_item_subtotal
+revenueperorder=order_rev_pair.groupByKey().map(lambda x : (x[0],round(sum(x[1]),1))) # grouping and performing sum of order_item_subtotal per order_id
+
+alternative:
+The above same problem can be solved by reduceByKey in a more efficient way
+
+code:
+
+order_rev_pair.reduceByKey(lambda x,y : round(x+y,2))
+
+10.SortByKey
+
+It sorts based on Key of KeyValue Pair
+
+From above example, if we take revenueperorder and if we apply
+
+revenueperorder.sortByKey() # this will sort the dataset in ascending order of order number
+revenueperorder.sortByKey(False) # this will sort dataset in descending order of order number
+revenueperorder.map(lambda x: (x[1],x)).sortByKey(False).map(lambda x :x[1]).take(10) # this will give you orders with  top ten revenue
+
+11.Dealing with partitions 
+
+if you are reading from a file to rdd in HDFS , by default it will create number of partitions equals number of blocks it has to read.
+Say Default block size of HDFS is 128mb, then if a file less than it will be read to rdd by spark as 1 partition since only one block is used.
+And if it is 256mb file, then 2 partitions and so on.
+
+To know the current number of partitions of an rdd,
+
+orderitems=sc.textFile("/public/retail_db/order_items")
+orderitems.getNumPartitions()
+
+To know , number of records in each partition, you can use
+
+orderitems.glom().map(lambda x : len(x))
+
+Now If I save it directly in to HDFS:
+orderitems.saveAsTextFile("/user/pathirippilly/spark_jobs/output_data_set/orderitesmpartitioned")
+
+we can see the how many number of partitions are there, that many number of files will be created.
+
+To alter the default partitions created, we can do it in multiple ways
+
+method 1 is while reading:
+orderitems=sc.textFile("/public/retail_db/order_items",5) # you can pass the second argument as numPartitions 
+
+method 2 is using coalese. If you want to decrease the number of partitions , we can use coalese.
+orderitems=sc.textFile("/public/retail_db/order_items")
+orderitems.coalesce(1) # this will reduce the number of partitions to 1
+
+note:
+It avoids a full shuffle. If it's known that the number is decreasing then the executor can safely keep data on the minimum number of partitions,
+ only moving the data off the extra nodes, onto the nodes that we kept.
+
+method 3 is using repartition.This is slower and expensive than coalesce(But you can increase or decrease partitions here)
+orderitems=sc.textFile("/public/retail_db/order_items")
+orderitems.repartition(5)# 
+
+Note:
+Keep in mind that repartitioning your data is a fairly expensive operation. Spark also has an optimized version of repartition() called coalesce() 
+that allows avoiding data movement, but only if you are decreasing the number of RDD partitions.
+
+12.groupByKey vs reduceByKey vs aggregateByKey:  why reduceByKey and aggregateByKey is preferred in spark2
+
+The main difference is the number of records that are tansferring from stage 0  to 1 during shuffling face:
+
+Bykey operations always results in shuffling , since grouping of records between multiple partitions  are needed
+In such case, result of shiffling is a new stage with a modified number of partitions
+Lets take the  code for calculating order revenue :
+
+orderitems=sc.textFile("/public/retail_db/order_items") # OrderItems file has been read here 
+order_rev_pair=orderitems.map(lambda order : (int(order.split(",")[1]),float(order.split(",")[4]))) # Creating pairs of order_id and order_item_subtotal
+revenueperorder=order_rev_pair.groupByKey().map(lambda x : (x[0],round(sum(x[1]),1))) # grouping and performing sum of order_item_subtotal per order_id
+
+whats happening in shuffle phase for groupByKey:
+
+Here we are applying  groupByKey and on order_rev_pair rdd, which is nothing but an rdd with key value pairs.
+Key is order id which is an integer.
+
+So when we apply groupByKey on a rdd which needs to have key value pairs, first it needs to be shuffled based on key.
+
+Shuffling  always heppens with hash mod on no.of partitions
+
+HashmodKey:
+
+hash mod Key is nothing but , (hash value of the key) modulo (no.of partitions of the rdd)
+
+in python hash value of any integer is the integer itself,for string its different.
+For finding hash value , we can use
+hash(key) # where key can be string or integer
+
+Any way in our example , key is an integer.so hash(key) is also the same.
+Lets say we have below key value pairs in one partition 1 and thus we have 3 partitions as a whole
+
+(5,299.95) => applying hash mod no.partitions , 5 mod 3 => 2
+(4,299.95) => applying hash mod no.partitions , 4 mod 3 => 1
+(2,129.99) => applying hash mod no.partitions , 2 mod 3 => 1
+(5,129.99) => applying hash mod no.partitions , 5 mod 3 => 2
+
+we can see result of mod operation is two distinct values 2,1. 
+All values with hash mod value 2 will come under one bucket(partition)
+and all with 1 will come under another bucket. 
+
+Like this for 3 existing partitions, we have 12 records.
+And possible has mod values are only three , 0,1,2.
+So possible number of partitions after shuffling are three.
+
+So all values with same hash mode value will come under same bucket.
+They will vbe grouped and sorted automatically.In above case it will be as below
+
+bucket 1:
+(2,129.99)
+(4,299.95)
+bucket 2:
+(5,299.95)
+5,129.99)
+
+Now this is stage 1 where groupByKey is happening .
+So all records  with same order_id will be grouped together
+(5,[299.95,129.99])
+(2,129.99)
+(4,299.95)
+
+If you see eventhough its grouped , no.of records transferred from stage 0 to stage 1 is same
+And Now we need an extra map function here to perform aggregation
+
+
+whats happening in shuffle phase for reduceByKey:
+
+If we take the same scenario as above , while performing hash mod operation itself on stage 0,
+reduceByKey will perform for each partition and bucket 1 and bucket 2 of stage 1 will look like this
+ 
+ bucket 1:
+(2,129.99)
+(4,299.95)
+bucket 2:
+(5,429.94)
+
+like this for every partition in stage 0 itself , intermediate aggregation will be done by reduceByKey
+And in stage 1, final  level of aggregation will be performed by reduceByKey.
+So a combiner implemenation is there here due to which records transferred between stages are less.
+
+
+This difference will be much high in case of large data sets so that if we use  reduceByKey , 'shuffle read' size will be 
+less
+
+Now aggregateByKey is as same as reduceByKey but only difference is ,we will be providing the intermediate combiner login.
+If we take the above scenario itself, along with total revenue , if we need to calculate the total number of items per order,
+we need to , we have to perform to aggregations together, so intermediate logic will change
+
+
+order_rev_pair.aggregateByKey((0.0,0),lambda x,y: (x[0]+y,x[1]+1),lambda x,y:x[0]+y[0],(x[1]+y[1]))
+
+Here we first tuple is initialization of desired output, second argument is the combiner logic which will be executed on stage 0.
+And third argument is the final aggregation logic which will be executed on stage1
+
+12.Filter , Joins and sortByKey()
+
+
+
+
+
+
+
+
+
+pyspark --master yarn --conf spark.ui.port=21888 --conf spark.dynamicallocationenabled=false --num-executors 2 --executor-memory 512M
+
+
+
+
+
+

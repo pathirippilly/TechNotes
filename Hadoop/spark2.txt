@@ -142,6 +142,15 @@ Note:RDD.toDebugString() will give you the rdd lineage graph or DAG
 -> rdd.take(n) # returns a list of n elements of rdd
 -> rdd.filter(function) # similar to where clause in sql
 
+
+example:WordCount Program
+
+rdd=sc.textFile("/user/pathirippilly/sample_data_mr/wordCount.txt",5)
+pipeRDD=rdd.map(lambda x : x.split(" ")).flatMap(lambda words : map(lambda word : (word,1),words)).reduceByKey(lambda a,b:a+b)
+pipeRDD.collect()
+
+
+
 Transformation
 *******
 rdd.take(n) (#where n is  any positive integer) will result in list (so its an action) of contents od rdd
@@ -208,6 +217,7 @@ It is similar to MEMORY_ONLY_SER, but it drops the partition that does not fits 
 e. DISK_ONLY
 In this storage level, RDD is stored only on disk. The space used for storage is low, the CPU computation time is high and it makes use of on disk storage.
 
+pyspark --master yarn --conf=spark.ui.port=21888  --conf spark.dynamicallocation.enabled=true --num-executors 2 --executor-memory 512M
 
 
 

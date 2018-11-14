@@ -384,7 +384,7 @@ left outer join
 distinct 
 order_customer_id,
 sum(flag) over (partition by order_customer_id) as flg
-from 
+from  
 (select 
 order_customer_id,
 order_id,
