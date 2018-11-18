@@ -255,7 +255,147 @@ order_rev_pair.aggregateByKey((0.0,0),lambda x,y: (x[0]+y,x[1]+1),lambda x,y:x[0
 Here we first tuple is initialization of desired output, second argument is the combiner logic which will be executed on stage 0.
 And third argument is the final aggregation logic which will be executed on stage1
 
-12.Filter , Joins and sortByKey()
+13.Filter , Joins and sortByKey()
+
+Lets see how filter works:
+
+filter() is similar to where clause of an sql. Say we need to filter orders with 'CLOSED' and 'COMPLETE' status 
+from a data set called orders with fileds order_id,order_tmst,order_customer_id,order_status. The code is as given below:
+
+orders=sc.textFile("/public/retail_db/orders")
+orders.filter(lambda x : x.split(",")[3] in ['CLOSED','COMPLETE']) # this will filter out All CLOSED and COMPLETE orders
+
+Lets see how join works:
+
+As in sql we have join , leftOuterJoin, rightOuterJoin, and fullOuterJoin.
+
+So to demonstrate that , we can take below data sets 
+
+orders with columns order_id,order_tmst,order_customer_id,order_status
+orderitems with columns order_item,order_item_order_id,product_id,order_qty,order_item_subtotal,price_per_qty
+
+#reading files in to rdd:
+
+orders=sc.textFile("/public/retail_db/orders")
+orderitems=sc.textFile("/public/retail_db/order_items")
+
+#Checking the count of orders in each data set:
+orders.count() # this will give  68883
+orderitems.map(lambda x : x.split(",")[1]).distinct().count() # this will give 57431(we are first filtering out orders alone and applying distinct() over it because, 
+#we have multiple items for a single order in this table)
+# above difference shows that we have 68883-57431=11452 orders with no order items 
+
+#Now lets take order_id and status alone from 'orders'.Also map order_item_order_id as key and each record as value (tuple) from 'orderitems' dataset
+closed_complete_orders=orders.filter(lambda x : x.split(",")[3] in ['CLOSED','COMPLETE']).map(lambda x : (x.split(",")[0], x.split(",")[3])) #closed or complete orders from 'orders'
+orderitems_mapped=orderitems.map(lambda x : (x.split(",")[1],x)) # Each record will be a tuple with order_item_order_id as key and entire line of record as value
+
+closed_complete_orders.join(orderitems_mapped) # This will give closed or complete orders with orderitems
+closed_complete_orders.leftOuterJoin(orderitems_mapped).filter(lambda x : x[1][1]==None).count() # this will give closed or complete orders with no orderitems in orderitem data set
+#Same can be achieved with rightOuterJoin by just swapping the left and right data sets as below
+orderitems_mapped.rightOuterJoin(closed_complete_orders).filter(lambda x : x[1][0]==None)
+#Now if you do a fullOuterJoin on both , you will get all matched records from both table as well as un matched records with None as value
+
+
+# Now lets see one of its application with sortByKey()
+
+
+scenario 1:
+we need to find total revenue per order_tmst joining data sets orders and order_items
+
+lets take the two data sets 
+orders with columns order_id,order_tmst,order_customer_id,order_status
+orderitems with columns order_item,order_item_order_id,product_id,order_qty,order_item_subtotal,price_per_qty
+
+
+
+#reading files in to rdd:
+
+orders=sc.textFile("/public/retail_db/orders")
+orderitems=sc.textFile("/public/retail_db/order_items")
+
+#filter closed and complete orders alone from orders and extract only order_id and order_tmst from 'orders':
+
+orders_closed_complete=orders.filter(lambda x : x.split(",")[3] in ['CLOSED','COMPLETE']).map(lambda x : (int(x.split(",")[0]),x.split(",")[1]))
+
+#extract order_item_order_id,order_item_subtotal from 'orderitems':
+
+orderitems_extract=orderitems.map(lambda x : (int(x.split(",")[1]),float(x.split(",")[4])))
+
+#Join both 'orders_closed_complete' and 'orderitems_extract' on order_id and extract  order_tmst and order_item_subtotal  column values alone
+
+orders_with_subtotal=orders_closed_complete.join(orderitems_extract).map(lambda x : x[1])
+
+#Now apply reduceByKey  to get total revenue per order date:
+
+from operator import add
+order_rev=orders_with_subtotal.reduceByKey(add).map(lambda x:(x[0],round(x[1],2)))
+
+#Now Sort the output based on date in ascending order:
+
+order_rev=order_rev.sortByKey()
+
+#Now Sort the output based on date in descending order:
+
+order_rev=order_rev.sortByKey(False)
+
+
+#Now Saving the output to a file.Here we need to convert tuple into a single string before writing into a file.
+order_rev_string=order_rev.map(lambda x : f"{x[0]},{x[1]}")
+order_rev_string.saveAsTextFile("out_put_path in hdfs") # output path should not exist. Also output splits are depends up on no.of partitions of rdd
+
+14.map() vs mapPartitions():
+
+If you use map() over an rdd , the function called  inside it will run for every record .It means if you have 10M records , function also will be executed 10M times.
+This is expensive especially when you are dealing with scenarios involving database connections and querying data from data base.
+Lets say inside map function, we have a function defined where we are connecting to a database and querying from it. Lets say our RDD is having 10M records.
+Now this function will execute 10M times which means 10M database connections will be created . This  is very expensive.
+In these kind of scenarios , we can use mapPartitions() instead of map().mapPartitions() will run the function called only once for each partitions.
+
+example:
+
+We can do a simple word count job for demonstrating this :
+
+lets consider the below dataset:
+
+/public/randomtextwriter/part-m-00000
+
+This dataset is of 1 GB so that by default it will be read as 	rdd with 9 partitions by spark from HDFS since default block size
+of HDFS is 128mb
+
+wordcounttext = sc.textFile("/public/randomtextwriter/part-m-00000") # rdd with 9 partitions
+
+Normal Wordcount logic using map is as below:
+
+wordcounttext.flatMap(lambda x : x.split(" ")).map(lambda x : (x,1)).reduceByKey(lambda x,y : x+y)
+
+Here rdd 'wordcounttext' is having 26421 records. flapMap will execute 26421 times.
+
+But if we implement mapPartition here , the function defined inside it will execute only once for every partition.
+And each partition will be read as a generator through which we can iterate and get the line of records.
+So dealing with this generator can be done through core-python APIs
+
+The above word count program can be written in two ways as below 
+
+method1:
+ wordcount=wordcounttext.mapPartitions(lambda x : map(lambda o:o.split(" "),x)).flatMap(lambda x : x).map(lambda x : (x,1)).reduceByKey(add)
+ 
+method2:
+here we define a function first which  will consume generator as an argument and iterate through it using itertools.chain.from_iterable().
+itertools.chain.from_iterable()	functions same as flatMap in spark so that for every partition (every generator) picked by mapPartitions()
+,it will convert the records in to independent words and words will be paired with '1'.And the output for each partition by this function will be
+a map object which inturn is a generator. And this will be consumed by the lambda function inside mapPartitions()
+
+
+def getWordTuples(i):
+	import itertools as it
+	wordTuples=map(lambda s : (s,1),it.chain.from_iterable(map(lambda s : s.split(" "),i)))
+	return wordTuples
+	
+wordTuples = lines.mapPartitions(lambda i : getWordTuples(i)) # getWordTuples will execute for every partition
+wordcount=wordTuples.reduceByKey(add)
+
+
+	
 
 
 
@@ -263,9 +403,7 @@ And third argument is the final aggregation logic which will be executed on stag
 
 
 
-
-
-pyspark --master yarn --conf spark.ui.port=21888 --conf spark.dynamicallocationenabled=false --num-executors 2 --executor-memory 512M
+pyspark --master yarn --conf spark.ui.port=21111 --conf spark.dynamicallocationenabled=false --num-executors 2 --executor-memory 512M
 
 
 
