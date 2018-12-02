@@ -19,4 +19,24 @@ In order to set a constant number of reducers:
  
  7. set hive.enforce.bucketing=true : ensures buckets are populated according to the table definition
  
+ 8. Minimally, these configuration parameters must be set appropriately to turn on transaction support in Hive:
+
+Client Side
+
+hive.support.concurrency – true
+hive.enforce.bucketing – true (Not required as of Hive 2.0)
+hive.exec.dynamic.partition.mode – nonstrict
+hive.txn.manager – org.apache.hadoop.hive.ql.lockmgr.DbTxnManager
+Server Side (Metastore)
+
+hive.compactor.initiator.on – true (See table below for more details)
+hive.compactor.worker.threads – a positive number on at least one instance of the Thrift metastore service
+
+For more information please visit :
+https://cwiki.apache.org/confluence/display/Hive/Hive+Transactions#HiveTransactions-Configuration
+https://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.6.5/bk_data-access/content/understanding-administering-compactions.html
+https://hortonworks.com/tutorial/using-hive-acid-transactions-to-insert-update-and-delete-data/
+https://cwiki.apache.org/confluence/display/Hive/Hive+Transactions
+https://cwiki.apache.org/confluence/display/Hive/LanguageManual+DML#LanguageManualDML-Delete
+ 
  

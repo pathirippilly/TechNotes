@@ -123,7 +123,7 @@ revenueperorder.map(lambda x: (x[1],x)).sortByKey(False).map(lambda x :x[1]).tak
 11.Dealing with partitions 
 
 if you are reading from a file to rdd in HDFS , by default it will create number of partitions equals number of blocks it has to read.
-Say Default block size of HDFS is 128mb, then if a file less than it will be read to rdd by spark as 1 partition since only one block is used.
+Say Default block size of HDFS (2.x)is 128mb, then if a file less than this size  will be read to rdd by spark as 1 partition since only one block is used.
 And if it is 256mb file, then 2 partitions and so on.
 
 To know the current number of partitions of an rdd,
@@ -142,31 +142,37 @@ we can see the how many number of partitions are there, that many number of file
 
 To alter the default partitions created, we can do it in multiple ways
 
-method 1 is while reading:
-orderitems=sc.textFile("/public/retail_db/order_items",5) # you can pass the second argument as numPartitions 
+method 1:
+While reading a file to rdd  using sparkContext, you can pass the second argument as numPartitions as below 
+orderitems=sc.textFile("/public/retail_db/order_items",5) # Here 5 partitions will be created irrespective of the size of the file 
 
-method 2 is using coalese. If you want to decrease the number of partitions , we can use coalese.
+method 2 :
+If you want to decrease the number of partitions , we can use coalesce.
+
 orderitems=sc.textFile("/public/retail_db/order_items")
 orderitems.coalesce(1) # this will reduce the number of partitions to 1
 
 note:
 It avoids a full shuffle. If it's known that the number is decreasing then the executor can safely keep data on the minimum number of partitions,
- only moving the data off the extra nodes, onto the nodes that we kept.
+only moving the data off the extra nodes, onto the nodes that we kept.
 
-method 3 is using repartition.This is slower and expensive than coalesce(But you can increase or decrease partitions here)
+method 3:
+This is using repartition.This is slower and expensive than coalesce(But you can increase or decrease partitions here)
 orderitems=sc.textFile("/public/retail_db/order_items")
-orderitems.repartition(5)# 
+orderitems.repartition(5)# Here we are repartitioning to 5
 
 Note:
-Keep in mind that repartitioning your data is a fairly expensive operation. Spark also has an optimized version of repartition() called coalesce() 
-that allows avoiding data movement, but only if you are decreasing the number of RDD partitions.
+Keep in mind that repartitioning your data is a fairly expensive operation.  
+
 
 12.groupByKey vs reduceByKey vs aggregateByKey:  why reduceByKey and aggregateByKey is preferred in spark2
 
 The main difference is the number of records that are tansferring from stage 0  to 1 during shuffling face:
 
 Bykey operations always results in shuffling , since grouping of records between multiple partitions  are needed
-In such case, result of shiffling is a new stage with a modified number of partitions
+In such case, result of shuffling is a new stage with a modified number of partitions
+
+
 Lets take the  code for calculating order revenue :
 
 orderitems=sc.textFile("/public/retail_db/order_items") # OrderItems file has been read here 
@@ -191,7 +197,7 @@ For finding hash value , we can use
 hash(key) # where key can be string or integer
 
 Any way in our example , key is an integer.so hash(key) is also the same.
-Lets say we have below key value pairs in one partition 1 and thus we have 3 partitions as a whole
+Lets say we have below key value pairs in one partition  and similarly  we have 3 partitions as a whole.
 
 (5,299.95) => applying hash mod no.partitions , 5 mod 3 => 2
 (4,299.95) => applying hash mod no.partitions , 4 mod 3 => 1
@@ -202,12 +208,12 @@ we can see result of mod operation is two distinct values 2,1.
 All values with hash mod value 2 will come under one bucket(partition)
 and all with 1 will come under another bucket. 
 
-Like this for 3 existing partitions, we have 12 records.
-And possible has mod values are only three , 0,1,2.
+Like this, for 3 existing partitions, we have 12 records.
+And possible hash mod values are only three - 0,1,2.(0 can also come if we have 3 as key - 3 mod 3 is zero)
 So possible number of partitions after shuffling are three.
 
 So all values with same hash mode value will come under same bucket.
-They will vbe grouped and sorted automatically.In above case it will be as below
+They will be grouped and sorted automatically.In above case it will be as below
 
 bucket 1:
 (2,129.99)
@@ -216,7 +222,10 @@ bucket 2:
 (5,299.95)
 5,129.99)
 
+(Bucket 0 also can have value which I am not mentioning here)
+
 Now this is stage 1 where groupByKey is happening .
+
 So all records  with same order_id will be grouped together
 (5,[299.95,129.99])
 (2,129.99)
@@ -229,7 +238,7 @@ And Now we need an extra map function here to perform aggregation
 whats happening in shuffle phase for reduceByKey:
 
 If we take the same scenario as above , while performing hash mod operation itself on stage 0,
-reduceByKey will perform for each partition and bucket 1 and bucket 2 of stage 1 will look like this
+reduceByKey will be performed for each partition and bucket 1 and bucket 2 of stage 1 will look like this
  
  bucket 1:
 (2,129.99)
@@ -239,13 +248,15 @@ bucket 2:
 
 like this for every partition in stage 0 itself , intermediate aggregation will be done by reduceByKey
 And in stage 1, final  level of aggregation will be performed by reduceByKey.
+
 So a combiner implemenation is there here due to which records transferred between stages are less.
 
 
 This difference will be much high in case of large data sets so that if we use  reduceByKey , 'shuffle read' size will be 
 less
 
-Now aggregateByKey is as same as reduceByKey but only difference is ,we will be providing the intermediate combiner login.
+Now aggregateByKey is as same as reduceByKey but only difference is ,we will be providing the intermediate combiner logic as a function.
+
 If we take the above scenario itself, along with total revenue , if we need to calculate the total number of items per order,
 we need to , we have to perform to aggregations together, so intermediate logic will change
 

@@ -1,4 +1,4 @@
-Hadoop Basics
+sHadoop Basics
 **************
 
 Main Property files:

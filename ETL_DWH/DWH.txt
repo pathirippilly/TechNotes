@@ -87,5 +87,11 @@ it takes bank 1-2 days to provide you that list separately.
 If both will not manage an ODS it will become very difficult to provide quick details to their customers, and it will be a very slow process and also an 
 overhead on their servers also.
 
+Active Transformation in Informatica
+************************************
+
+
+
+
  
 
