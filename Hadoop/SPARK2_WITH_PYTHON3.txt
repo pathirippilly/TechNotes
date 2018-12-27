@@ -405,13 +405,124 @@ def getWordTuples(i):
 wordTuples = lines.mapPartitions(lambda i : getWordTuples(i)) # getWordTuples will execute for every partition
 wordcount=wordTuples.reduceByKey(add)
 
+15.Ranking and groupByKey()
 
+scenario 1:Display Top N products order by price group by category 
+
+
+code:
+
+products=sc.textFile("/public/retail_db/products")
+products_filtered=products.filter(lambda x : x.split(",")[4] != "") #filtering out a bad record
+products_filtered_map=products_filtered.map(lambda x : (int(x.split(",")[1]),x))
+products_filtered_group=products_filtered_map.groupByKey()
+
+def getTopNProducts(products,topN):
+	return sorted(products,key=lambda p : float(p.split(",")[4]),reverse=True)[:topN]
+
+topNProductsByCategory = products_filtered_group.flatMap(lambda p : getTopNProducts(list(p[1]),4))
+
+
+
+scenario 2: Display Top N proced products group by category
+
+method1:
+
+
+def getTopNPricedPrducts(products,topN):
+	pricelist=sorted(set(list(map(lambda p : float(p.split(",")[4]),products))),reverse=True)[:topN]
+	return sorted(list(filter(lambda p : float(p.split(",")[4]) in pricelist,products)),key=lambda k  : float(k.split(",")[4]),reverse=True)
+	
+TopNPricedPrducts = products_filtered_group.flatMap(lambda p : getTopNPricedPrducts(list(p[1]),4))
+
+method2(less performance for large data sets):
+
+def getTopNPricedPrducts2(products,topN):
+	from itertools import takewhile
+	pricelist=sorted(set(list(map(lambda p : float(p.split(",")[4]),products))),reverse=True)[:topN]
+	SortedProducts = sorted(products,key=lambda k : k.split(",")[4],reverse=True)
+	return takewhile(lambda p : float(p.split(",")[4]) in pricelist,SortedProducts)
 	
 
+16.Accumulators, Broadcast Variables, Repartition and Coalesce
+
+Scebarion 1 : Getting Monthly product revenue
+
+>We have to use orders,orderitems,products data sets to compute revenue for per product for a given month
+>orders have order_id and order_date
+>order_items have order_item_subtotal,order_item_order_id and order_item_product_id
+>products have product_id and product name
+>order and order_items are in HDFS and products are in local file system
+
+For this we will be passing following arguments through application.properties file:
+(application.properties file will look like this)
+
+[prod]
+executionmode = yarn-client
+input_base_dir = /public/retail_db
+output_base_dir = /user/pathirippilly/spark_jobs/output_data_set/OrderRevenuePerProduct
+local_dir = /home/pathirippilly/retail_db
+month = 2013-08
 
 
+input_base_dir # this is the HDFS path where orders and orderitems files are placed
+output_base_dir # this is the HDFS path where output will be saved as file
+local_dir # local path where products file is placed
+month # this  is the month for which we will be calculating the revenue
+exec_env # this is the environment where we will be running the script. We need to pass this as a runtime argument also
+
+import sys
+import configparser as cp
+
+try:
+        from pyspark import SparkContext, SparkConf
+
+        props = cp.RawConfigParser()
+        props.read("/home/pathirippilly/spark2_jobs/src/main/python/application.properties")
+        conf = SparkConf(). \
+                setAppName("RevenuePerProductForMonth"). \
+                setMaster(props.get(sys.argv[1],"executionmode"))
+        sc =  SparkContext(conf = conf)
+        inputpath = props.get(sys.argv[1],"input_base_dir")
+        outputpath= props.get(sys.argv[1],"output_base_dir")
+        month=props.get(sys.argv[1],"month")
+        localdir=props.get(sys.argv[1],"local_dir")
+        path = sc._gateway.jvm.org.apache.hadoop.fs.Path
+        filesystem=sc._gateway.jvm.org.apache.hadoop.fs.FileSystem
+        configuration=sc._gateway.jvm.org.apache.hadoop.conf.Configuration
+
+        fs=filesystem.get(configuration())
+
+        if(fs.exists(path(inputpath)) == False):
+                print("inputpath doesnot exists")
+        else:
+                if(fs.exists(path(outputpath))):
+                        fs.delete(path(outputpath),True)
+
+                orders=inputpath + "/orders"
+                ordersFiltered = sc.textFile(orders). \
+                        filter(lambda order : month in order.split(",")[1]). \
+                        map(lambda order : (int(order.split(",")[0]),1))
+                orderitems=inputpath + "/order_items"
+                orderitemsFiltered = sc.textFile(orderitems). \
+                        map(lambda oi : (int(oi.split(",")[1]),(int(oi.split(",")[2]),float(oi.split(",")[4]))))
+                revenueByProductId=orderitemsFiltered.join(ordersFiltered).map(lambda rec : rec[1][0]).reduceByKey(lambda x,y: x+y)
+
+                with open(localdir + "/products/part-00000") as file:
+                        products=file.read().splitlines()
+                productsFiltered = sc.parallelize(products). \
+                        map(lambda p : (int(p.split(",")[0]),p.split(",")[2]))
+                revenueByProductName=revenueByProductId.join(productsFiltered).map(lambda p: str(p[1][1]) + "\t" + str(round(p[1][0],2)))
+                for i in revenueByProductName.take(10):
+                        print(i)
+                revenueByProductName.saveAsTextFile(outputpath)
+
+except ImportError as e:
+        print("Can not import spark modules",e)
+sys.exit(1)
 
 
+spark-submit --master yarn --conf spark.ui.port=21888 --num-executors 2 --executor-memory 512M /home/pathirippilly/spark2_jobs/src/main/python/RevenuePerProductForMonth.py prod
 
 
 pyspark --master yarn --conf spark.ui.port=21111 --conf spark.dynamicallocationenabled=false --num-executors 2 --executor-memory 512M

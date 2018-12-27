@@ -1,7 +1,7 @@
 HIVE
 **********
 --Hive Language Manual : https://cwiki.apache.org/confluence/display/Hive/LanguageManual
-/*Create DATABASE and TABLE*/
+/*Create DATABASE and TABLE*/ 
 /*-------------------------*/
 
 /*This will create a database*/
