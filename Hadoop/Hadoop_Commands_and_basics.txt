@@ -104,7 +104,7 @@ a. simple import
 
 #this will create a data set with specific name that we have provided on target hadoop directory.The target directory should not exist since this one is not an update
 
-sqoop import -connect jdbc:mysql://ms.itversity.com:3306/retail_db --username retail_user --password itversity \
+sqoop import --connect jdbc:mysql://ms.itversity.com:3306/retail_db --username retail_user --password itversity \
 --table order_items \
 --target-dir /user/pathirippilly/sqoop_import/retail_db/order_items
 
