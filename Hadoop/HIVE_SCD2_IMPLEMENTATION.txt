@@ -40,3 +40,7 @@ You have to perform INSERT OVERWRITE on TGT table and select records from interm
 
 Step 7: Drop Intermediate and External Tables
 Once the destination table is populated you should drop the intermediate and external table:
+
+[1--10]
+def dun(n)
+l[]
