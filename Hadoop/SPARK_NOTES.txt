@@ -198,3 +198,7 @@ etc.
 
 Thus depending on your end table or requirements for data and in what form data is produced at source you may choose static or dynamic partition.
 
+
+6.SPARK v/s Hadoop mapreduce: How spark is having a upper hand
+
+1.For a map reduce , evry map operation results in writing the output to

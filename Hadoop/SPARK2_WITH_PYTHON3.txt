@@ -600,8 +600,257 @@ EXECUTION:
 spark-submit --master yarn --conf spark.ui.port=21888 --num-executors 2 --executor-memory 512M /home/pathirippilly/spark2_jobs/src/main/python/RevenuePerProductForMonthBroadcast.py prod
 
 
+Repartition v/s coalesce:
+
+By Default when you read a file from HDFS , the minimum number of partitions created for rdd by default is defined by the value of sc.defaultParallelism (spark.default.parallelism)
+. Value for this will be sum of all physical cores of your machine. But if the file size is greater than the blocksize (i.e 128mb), no of partitions created will be equal 
+to no.of input splits (i.e, no.of blocks read).
+
+Repartition always do a full shuffle and create new partitions with almost equal no.of records.Usimg Repartition we can increase or decrease the no.of partitions.
+Since it uses a full shuffle performance overhead is there.While coalesce  can be used only to decrease the no.of partitions and it won't do a full shuffle.
+it will merge the existing partitions. But this will make the partition size consistent,so that no.of records of each partitions will have a good difference.
+But while reducing the no.of partitions , coalesce will perform faster than repartition since it avoids a full shuffle. But it is also said that spark will work
+better with partitions of equal size. 
+
+Usually after operations like join,filter,aggregations , no.of records in each partitions will change and it won't be almost same.So in that cases we should
+consider applying repartition.
 
 
+
+17. DATAFRAMES
+
+Basics
+******
+
+>>reading a csv to data frame :
+spark.read.csv('/public/retail_db/orders')
+
+here you will have no.of columns similar to no.of commas in file 
+
+>>reading a textfile to data frame :
+spark.read.text('/public/retail_db/orders')
+
+here each line from file is a column value. so Only one column is created.
+
+>>reading a csv to data frame with columns :
+orders=spark.read.csv('/public/retail_db/orders').toDF("order_id","order_date","order_customer_id","order_status")
+
+here , eventhough column names are created , still , 'stringType' will be the default data type since we are not specifying it seperately
+
+>>reading a csv and casting the datatypes to what it is required to be:
+
+method1: Casting inside select statement
+from pyspark.sql.types import  *
+from pyspark.sql.functions import *
+
+orders=spark.read.csv('/public/retail_db/orders').\
+    toDF("order_id","order_date","order_customer_id","order_status").\
+    select(col("order_id").cast(IntegerType()),to_timestamp("order_date",
+                                                            "yyyy-MM-dd HH:mm:ss").alias("order_date"),
+           col("order_customer_id").cast(IntegerType()),"order_status")
+
+		   
+method2: casting inside withColumn 
+from pyspark.sql.types import *
+orders=spark.read.csv('/public/retail_db/orders').\
+    toDF("order_id","order_date","order_customer_id","order_status")
+	orders=orders.withColumn('order_id',orders.order_id.cast(IntegerType()))
+	
+	
+	
+method3: using explicit schema to define the table
+from pyspark.sql.types import *
+
+schema=StructType(
+[StructField("order_id",IntegerType(),False),StructField("order_date",TimestampType(),False),
+StructField("order_customer_id",IntegerType(),False),StructField("order_status",StringType(),False)])
+
+ordersrdd=spark.sparkContext.textFile('/public/retail_db/orders').map(lambda x : (int(x.split(",")[0]),datetime.strptime(x.split(",")[1],"%Y-%m-%d %H:%M:%S.%f"),
+int(x.split(",")[2]),x.split(",")[3]))
+
+orders=spark.createDataFrame(ordersrdd,schema)
+
+method4(most preferred):implemenation of schema while reading as a dataframe
+
+schema=StructType(
+[StructField("order_id",IntegerType(),False),StructField("order_date",TimestampType(),False),
+StructField("order_customer_id",IntegerType(),False),StructField("order_status",StringType(),False)])
+
+spark.read.schema(ordersschema).csv("/public/retail_db/orders")
+OR
+spark.read.schema(ordersschema).format("csv").load("/public/retail_db/orders")
+
+
+
+>>reading a hive table using spark.read.table to DATAFRAME:
+
+orders=spark.read.table("pathirippilly_retail_db_orc.orders");
+
+>>reading from a remote RDBMS DB into dataframe (here its mysql):
+
+step 1:
+if you are using it in a spark shell:
+
+launch the spark shell (spark-submit)with --jars option as well as --driver-class-path
+
+ pyspark --master yarn --conf spark.ui.port=21111 --conf spark.dynamicallocationenabled=false --num-executors 2 --executor-memory 512M 
+ --jars /usr/share/java/mysql-connector-java.jar 
+ --driver-class-path /usr/share/java/mysql-connector-java.jar
+
+if you are writing a spark program and supposed to do a spark-submit:
+
+you need to pass below two parameters
+
+--jars /usr/share/java/mysql-connector-java.jar 
+--driver-class-path /usr/share/java/mysql-connector-java.jar
+
+step2:
+method1:
+
+spark.read.format("jdbc").\
+option("url","jdbc:mysql://ms.itversity.com").\
+option("dbtable","retail_db.orders").\
+option("user","retail_user").\
+option("password","itversity").\
+load().show()	
+
+method2:
+
+spark.read.jdbc("jdbc:mysql://ms.itversity.com","retail_db.orders",properties={"user":"retail_user","password":"itversity"})	
+
+when you read from a rdbms table , ony a single partition is created by default.If you want to create multiple partitions, you need to pass it
+explicitely as below
+
+spark.read.jdbc("jdbc:mysql://ms.itversity.com","retail_db.orders",numPartitions=4,properties={"user":"retail_user","password":"itversity"})
+
+if I want specifically to partition based on a column, then I need to pass the column,lowerBound,upperBound name as below:
+
+
+spark.read.jdbc("jdbc:mysql://ms.itversity.com","retail_db.order_items",numPartitions=4,column="order_item_order_id",lowerBound=10000,
+upperBound=20000,properties={"user":"retail_user","password":"itversity"})
+
+here it will split the order_item_order_id as follows :
+
+partition1 - minvalue-12499 
+partition2 - 12500-14499 
+partition3 - 14500-17499 
+partition4 - 17500-maxvalue
+
+
+
+
+if you want to run a sql on remote rdbms and get the output into 
+
+orderrevenue=spark.read.jdbc("jdbc:mysql://ms.itversity.com","(select order_date,round(sum(order_item_subtotal),2) as revenue from retail_db.orders o join retail_db.order_items oi "
+                                                             "on (o.order_id=oi.order_item_order_id and o.order_status in('CLOSED','COMPLETE')) group by order_date) a",
+                             properties={"user":"retail_user","password":"itversity"})    
+		   
+		   
+
+
+getting count from a dataframe :
+
+orders.count()
+
+creating a tempview over dataframe and perform sql:
+
+orders.createTempView("orderstemp")
+spark.sql('select * from orderstemp limit 20')
+
+Creating a spak session object :
+
+spark = SparkSession.builder \
+            .appName("Transsum") \
+            .config("mapreduce.input.fileinputformat.input.dir.recursive", "true") \
+            .config("spark.sql.hive.verifyPartitionPath", "false") \
+            .config("hive.exec.dynamic.partition.mode", "nonstrict") \
+            .config("hive.exec.dynamic.partition", "true") \
+            .enableHiveSupport() \
+
+			
+			
+Dataframe Functions : pyspark.sql.functions
+*********************************************
+
+Date Manipulation 
+********************
+
+add_months(start, months)
+
+    current_date()
+        Returns the current date as a :class:`DateType` column.
+current_timestamp()
+        Returns the current timestamp as a :class:`TimestampType` column.
+date_add(start, days)
+        Returns the date that is `days` days after `start`
+date_format(date, format)
+Converts a date/timestamp/string to a value of string in the format specified by the date
+        format given by the second argument.
+
+        A pattern could be for instance `dd.MM.yyyy` and could return a string like '18.03.1993'. All
+        pattern letters of the Java class `java.text.SimpleDateFormat` can be used.
+
+ date_sub(start, days)
+        Returns the date that is `days` days before `start`
+date_trunc(format, timestamp)
+ Returns timestamp truncated to the unit specified by the format.
+
+        :param format: 'year', 'yyyy', 'yy', 'month', 'mon', 'mm',
+            'day', 'dd', 'hour', 'minute', 'second', 'week', 'quarter'
+			
+datediff(end, start)
+        Returns the number of days from `start` to `end`.
+		
+ dayofmonth(col)
+        Extract the day of the month of a given date as integer.
+		
+ dayofweek(col)
+        Extract the day of the week of a given date as integer.
+dayofyear(col)
+        Extract the day of the year of a given date as integer.
+
+ from_unixtime(timestamp, format='yyyy-MM-dd HH:mm:ss')
+        Converts the number of seconds from unix epoch (1970-01-01 00:00:00 UTC) to a string
+        representing the timestamp of that moment in the current system time zone in the given
+        format.
+ from_utc_timestamp(timestamp, tz)
+        Given a timestamp like '2017-07-14 02:40:00.0', interprets it as a time in UTC, and renders
+        that time as a timestamp in the given time zone. For example, 'GMT+1' would yield
+        '2017-07-14 03:40:00.0'
+    hour(col)
+        Extract the hours of a given date as integer.
+ to_date(col, format=None)
+        Converts a :class:`Column` of :class:`pyspark.sql.types.StringType` or
+        :class:`pyspark.sql.types.TimestampType` into :class:`pyspark.sql.types.DateType`
+        using the optionally specified format. Specify formats according to
+        `SimpleDateFormats <http://docs.oracle.com/javase/tutorial/i18n/format/simpleDateFormat.html>`_.
+        By default, it follows casting rules to :class:`pyspark.sql.types.DateType` if the format
+        is omitted (equivalent to ``col.cast("date")``).
+to_timestamp(col, format=None)
+        Converts a :class:`Column` of :class:`pyspark.sql.types.StringType` or
+        :class:`pyspark.sql.types.TimestampType` into :class:`pyspark.sql.types.DateType`
+        using the optionally specified format. Specify formats according to
+        `SimpleDateFormats <http://docs.oracle.com/javase/tutorial/i18n/format/simpleDateFormat.html>`_.
+        By default, it follows casting rules to :class:`pyspark.sql.types.TimestampType` if the format
+        is omitted (equivalent to ``col.cast("timestamp")``).
+ to_utc_timestamp(timestamp, tz)
+        Given a timestamp like '2017-07-14 02:40:00.0', interprets it as a time in the given time
+        zone, and renders that time as a timestamp in UTC. For example, 'GMT+1' would yield
+        '2017-07-14 01:40:00.0'.
+ trunc(date, format)
+        Returns date truncated to the unit specified by the format.
+unix_timestamp(timestamp=None, format='yyyy-MM-dd HH:mm:ss')
+        Convert time string with given pattern ('yyyy-MM-dd HH:mm:ss', by default)
+        to Unix time stamp (in seconds), using the default timezone and the default
+        locale, return null if fail.
+
+        if `timestamp` is None, then it returns current timestamp.
+ weekofyear(col)
+        Extract the week number of a given date as integer.
+ year(col)
+        Extract the year of a given date as integer.
+
+        :param format: 'year', 'yyyy', 'yy' or 'month', 'mon', 'mm'
 pyspark --master yarn --conf spark.ui.port=21111 --conf spark.dynamicallocationenabled=false --num-executors 2 --executor-memory 512M
 
 
