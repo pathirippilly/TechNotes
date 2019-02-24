@@ -199,6 +199,8 @@ etc.
 Thus depending on your end table or requirements for data and in what form data is produced at source you may choose static or dynamic partition.
 
 
-6.SPARK v/s Hadoop mapreduce: How spark is having a upper hand
+6.How to controll partitions formed during shuffling phase
 
-1.For a map reduce , evry map operation results in writing the output to
+spark.conf.set('spark.sql.shuffle.partitions',2)
+
+so here it wll set the spark.sql.shuffle.partitions to 2 so that for any shuffle phase , it will use only tw partitions

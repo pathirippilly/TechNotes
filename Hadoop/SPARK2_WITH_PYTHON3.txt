@@ -693,8 +693,8 @@ if you are using it in a spark shell:
 
 launch the spark shell (spark-submit)with --jars option as well as --driver-class-path
 
- pyspark --master yarn --conf spark.ui.port=21111 --conf spark.dynamicallocationenabled=false --num-executors 2 --executor-memory 512M 
- --jars /usr/share/java/mysql-connector-java.jar 
+ pyspark --master yarn --conf spark.ui.port=21111 --conf spark.dynamicallocationenabled=false --num-executors 2 --executor-memory 512M \
+ --jars /usr/share/java/mysql-connector-java.jar \
  --driver-class-path /usr/share/java/mysql-connector-java.jar
 
 if you are writing a spark program and supposed to do a spark-submit:
@@ -777,7 +777,7 @@ Date Manipulation
 
 add_months(start, months)
 
-    current_date()
+    current_date()	
         Returns the current date as a :class:`DateType` column.
 current_timestamp()
         Returns the current timestamp as a :class:`TimestampType` column.
@@ -851,7 +851,236 @@ unix_timestamp(timestamp=None, format='yyyy-MM-dd HH:mm:ss')
         Extract the year of a given date as integer.
 
         :param format: 'year', 'yyyy', 'yy' or 'month', 'mon', 'mm'
+
+Scenario1:
+
+
+# Convert a timestamp string of format "MM/dd/yyyy HH:mm:ss.SSSSSS" to "yyyy/MM/dd HH:mm:ss.SSSSSS" and save it as timestamp
+#Find day of month,date + 6 months,utc_time,year_beg,year,month
+
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import *
+from datetime import date,time,datetime
+from pyspark.sql.types import *
+
+# Convert a timestamp string of format "MM/dd/yyyy HH:mm:ss.SSSSSS" to "yyyy/MM/dd HH:mm:ss.SSSSSS" and save it as timestamp
+spark=SparkSession.builder.master("local").appName("DateManipulation").getOrCreate()
+df = spark.createDataFrame([('12/21/2015 23:21:20.689523', "product1")], ['dt', "product_name"])
+df = df.withColumn('row_index', monotonically_increasing_id())
+
+
+def convert_fmt(date_time):
+    return datetime.strptime(datetime.strptime(date_time, "%m/%d/%Y %H:%M:%S.%f").strftime("%Y/%m/%d %H:%M:%S.%f"),
+                             "%Y/%m/%d %H:%M:%S.%f")
+
+
+df_new = df.rdd.map(lambda x: (x.asDict()["row_index"], convert_fmt(x.asDict()["dt"]))).toDF(["index", "dt_new"])
+df = df_new.join(df, df_new.index == df.row_index).drop("row_index", "index", "dt")
+df=df.withColumn("day_of_mn",dayofmonth("dt_new")). \
+    withColumn("dt_6mnts", add_months(df.dt_new, 6)).\
+    withColumn("utc_time",to_utc_timestamp("dt_new", "UTC")).\
+    withColumn("year_beg",trunc("dt_new","YYYY")).\
+    withColumn("year",year("dt_new")). \
+    withColumn("month",month("dt_new"))
+df.printSchema()
+df.show()
+
+select v/s selectExpr 
+*********************
+
+Both select as well as selectExpr are having same functionalities but with different definition.
+
+scenario:
+Say If we need to get rank the orders in "orders" dataset for every customer in descending order of order_date
+
+implemenation using select :
+
+#Here I need import pyspark.sql.functions,pyspark.sql.window modules for getting dense_rank(),partitionBy(),orderBy() methods
+
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import *
+from pyspark.sql.window import Window
+from pyspark.sql.types import *
+
+spark=SparkSession.builder.master("local").appName("rankImplementation").getOrCreate()
+
+ordersschema=StructType(
+[StructField("order_id",IntegerType(),False),StructField("order_date",TimestampType(),False),
+StructField("order_customer_id",IntegerType(),False),StructField("order_status",StringType(),False)]).
+
+orders1=spark.read.schema(ordersschema).csv("/public/retail_db/orders")
+
+window=Window.partitionBy(orders.order_customer_id).orderBy(orders.order_date.desc())
+
+orders1=orders.select("*",dense_rank().over(window).alias("rnk"))
+
+implemenation using selectExpr:
+#here we are implementing it as similar to SQL. So no need to seperate functions to be imported and used.
+
+from pyspark.sql import SparkSession
+from pyspark.sql.types import *
+
+spark=SparkSession.builder.master("local").appName("rankImplementation").getOrCreate()
+
+ordersschema=StructType(
+[StructField("order_id",IntegerType(),False),StructField("order_date",TimestampType(),False),
+StructField("order_customer_id",IntegerType(),False),StructField("order_status",StringType(),False)])
+
+orders2=spark.read.schema(ordersschema).csv("/public/retail_db/orders")
+
+orders2=orders2.selectExpr("*","Dense_rank() over (partition by order_customer_id order by order_date) as rnk").show()
+
+where/filter
+****************
+
+'where' is an alias for 'filter'. It also accepts SQL type definitions in quotes as well as normal dataframe functions.
+
+scenario:
+
+Say if we need to filter CLOSED or COMPLETE orders from orders dataframe, we can do it as in below two methods 
+
+method1: using spark.sql.functions
+
+from pyspark.sql import SparkSession
+from pyspark.sql.types import *
+from pyspark.sql.functions import *
+
+spark=SparkSession.builder.master("local").appName("rankImplementation").getOrCreate()
+
+ordersschema=StructType(
+[StructField("order_id",IntegerType(),False),StructField("order_date",TimestampType(),False),
+StructField("order_customer_id",IntegerType(),False),StructField("order_status",StringType(),False)])
+
+orders=spark.read.schema(ordersschema).csv("/public/retail_db/orders").where(col("order_status").isin("CLOSED","COMPLETE"))
+
+method2: using sql expression
+
+from pyspark.sql import SparkSession
+from pyspark.sql.types import *
+from pyspark.sql.functions import *
+
+spark=SparkSession.builder.master("local").appName("rankImplementation").getOrCreate()
+
+ordersschema=StructType(
+[StructField("order_id",IntegerType(),False),StructField("order_date",TimestampType(),False),
+StructField("order_customer_id",IntegerType(),False),StructField("order_status",StringType(),False)])
+
+orders=spark.read.schema(ordersschema).csv("/public/retail_db/orders").where("order_status in ('COMPLETE','CLOSED')")
+
+when().otheriwse()
+************************
+scenario:
+As a part of checking the data quality , we need to ensure all rows satisfies the formula : 
+order_item_subtotal = (order_item_quantity*order_item_product_price). 
+For this we need to add a seperate column named "valid" 
+which should have 'Y' as value for all those rows which satisfy the above formula and for all other rows it should have 'N' as value.
+
+orderitemswithflag=orderitems.withColumn("valid",when(orderitems.order_item_subtotal != round((orderitems.order_item_product_price*orderitems.order_item_quantity),2),"N").otherwise("Y"))
+orderitemswithflag.where("valid='N'").count() # this should give the number of invalid records
+
+join()
+*********
+
+Scenario1:
+
+Get Daily Product revenue for all CLOSED and COMPLETE orders
+
+note: order and orderitems datasets are in HDFS and product dataset is in local file system
+
+
+
+from pyspark.sql import SparkSession
+from pyspark.sql.types import *
+from pyspark.sql.functions import *
+
+
+spark=SparkSession.builder.master("yarn-client").appName("GetDailyProductRevenue").getOrCreate()
+
+ordersschema=StructType(
+[StructField("order_id",IntegerType(),False),StructField("order_date",TimestampType(),False),
+StructField("order_customer_id",IntegerType(),False),StructField("order_status",StringType(),False)])
+
+orderitemsschema=StructType(
+[StructField("order_item_id",IntegerType(),False),StructField("order_item_order_id",IntegerType(),False),
+StructField("order_item_product_id",IntegerType(),False),StructField("order_item_quantity",IntegerType(),False),
+ StructField("order_item_subtotal", FloatType(), False),StructField("order_item_product_price", FloatType(), False)])
+
+productschema=StructType([StructField("product_id",IntegerType(),False),StructField("product_category_id",IntegerType(),False),StructField("product_name",StringType(),False),
+StructField("product_description",StringType(),False),StructField("product_price",FloatType(),False),StructField("product_image",StringType(),False)])
+
+orders=spark.read.schema(ordersschema).csv("/public/retail_db/orders").where(col("order_status").isin('COMPLETE','CLOSED')).select("order_id")
+orderitems=spark.read.schema(orderitemsschema).csv("/public/retail_db/order_items").select("order_item_order_id","order_item_product_id","order_item_subtotal")
+products=spark.read.schema(productschema).csv("/public/retail_db/products").select("product_id","product_name")
+
+
+orderrevenue=orders.join(orderitems,orders.order_id==orderitems.order_item_order_id).drop("order_id","order_item_order_id").groupBy("order_item_product_id").\
+agg(round(sum("order_item_subtotal"),2).alias("revenue")).join(products,products.product_id==orderitems.order_item_product_id).drop("order_item_product_id","product_id")
+
+Windowing and analytical functions
+************************************
+scenario1:(Implemenation of Ranking)
+Get Top N products per day
+
+
+from pyspark.sql import SparkSession
+from pyspark.sql.types import *
+from pyspark.sql.functions import *
+from pyspark.sql.window import Window
+
+
+spark=SparkSession.builder.master("yarn-client").appName("GetTopNProductsPerDay").getOrCreate()
+
+
+ordersschema=StructType(
+[StructField("order_id",IntegerType(),False),StructField("order_date",TimestampType(),False),
+StructField("order_customer_id",IntegerType(),False),StructField("order_status",StringType(),False)])
+
+orderitemsschema=StructType(
+[StructField("order_item_id",IntegerType(),False),StructField("order_item_order_id",IntegerType(),False),
+StructField("order_item_product_id",IntegerType(),False),StructField("order_item_quantity",IntegerType(),False),
+StructField("order_item_subtotal", FloatType(), False),StructField("order_item_product_price", FloatType(), False)])
+
+productschema=StructType([StructField("product_id",IntegerType(),False),StructField("product_category_id",IntegerType(),False),
+StructField("product_name",StringType(),False),StructField("product_description",StringType(),False),StructField("product_price",
+FloatType(),False),StructField("product_image",StringType(),False)])
+
+orders=spark.read.schema(ordersschema).csv("/public/retail_db/orders").where(col("order_status").isin('COMPLETE','CLOSED')).select("order_id","order_date")
+orderitems=spark.read.schema(orderitemsschema).csv("/public/retail_db/order_items").select("order_item_order_id","order_item_product_id","order_item_subtotal")
+products=spark.read.schema(productschema).csv("/public/retail_db/products").select("product_id","product_name")
+
+perDayProductRevenue=orders.join(orderitems,orders.order_id==orderitems.order_item_order_id).drop("order_id","order_item_order_id").\
+groupBy("order_item_product_id","order_date").agg(round(sum("order_item_subtotal"),2).alias("revenue")).\
+join(products,products.product_id==orderitems.order_item_product_id).drop("order_item_product_id").\
+select("product_id","product_name","order_date","revenue")
+
+windowspec=Window.partitionBy("order_date").orderBy(desc("revenue"))
+
+
+topNproductsPerDay=perDayProductRevenue.withColumn("rnk",dense_rank().over(windowspec)).where("rnk<=10").drop("rnk")
+
+
+
+
 pyspark --master yarn --conf spark.ui.port=21111 --conf spark.dynamicallocationenabled=false --num-executors 2 --executor-memory 512M
+
+scenario2:(Implemenation of lead and lag)
+
+get Top 2 products per day and calculate their difference in revenue
+
+
+topNproductsPerDay=perDayProductRevenue.withColumn("rnk",dense_rank().over(windowspec)).where("rnk<=2").drop("rnk")
+		
+topNproductsPerDay.withColumn("leadval",lead("revenue").over(windowspec)).\
+withColumn("lagval",lag("revenue").over(windowspec)).\
+withColumn("diff",col("revenue")-(when(col("leadval").isNotNull(),col("leadval")).otherwise(0)+when(col("lagval").isNotNull(),col("lagval")).otherwise(0))).\
+drop("leadval","lagval").show()
+
+OR
+
+topNproductsPerDay.withColumn("leadval",lead("revenue").over(windowspec)).\
+withColumn("diff",col("revenue")-col("leadval")).\
+drop("leadval").show()		
+	
 
 
 
