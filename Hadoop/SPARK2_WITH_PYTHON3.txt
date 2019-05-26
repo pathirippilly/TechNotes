@@ -1061,7 +1061,6 @@ topNproductsPerDay=perDayProductRevenue.withColumn("rnk",dense_rank().over(windo
 
 
 
-pyspark --master yarn --conf spark.ui.port=21111 --conf spark.dynamicallocationenabled=false --num-executors 2 --executor-memory 512M
 
 scenario2:(Implemenation of lead and lag)
 
@@ -1079,7 +1078,46 @@ OR
 
 topNproductsPerDay.withColumn("leadval",lead("revenue").over(windowspec)).\
 withColumn("diff",col("revenue")-col("leadval")).\
-drop("leadval").show()		
+drop("leadval").show()	
+
+
+18.SAPRK-SQL	
+
+scenario: DailyProductRevenue
+
+from pyspark.sql import SparkSession
+from pyspark.sql.types import *
+from pyspark.sql.functions import *
+
+
+spark=SparkSession.builder.master("yarn-client").appName("GetDailyProductRevenue").getOrCreate()
+
+ordersschema=StructType(
+[StructField("order_id",IntegerType(),False),StructField("order_date",TimestampType(),False),
+StructField("order_customer_id",IntegerType(),False),StructField("order_status",StringType(),False)])
+
+orderitemsschema=StructType(
+[StructField("order_item_id",IntegerType(),False),StructField("order_item_order_id",IntegerType(),False),
+StructField("order_item_product_id",IntegerType(),False),StructField("order_item_quantity",IntegerType(),False),
+ StructField("order_item_subtotal", FloatType(), False),StructField("order_item_product_price", FloatType(), False)])
+
+productschema=StructType([StructField("product_id",IntegerType(),False),StructField("product_category_id",IntegerType(),False),StructField("product_name",StringType(),False),
+StructField("product_description",StringType(),False),StructField("product_price",FloatType(),False),StructField("product_image",StringType(),False)])
+
+orders=spark.read.schema(ordersschema).csv("/public/retail_db/orders")
+orderitems=spark.read.schema(orderitemsschema).csv("/public/retail_db/order_items")
+products=spark.read.schema(productschema).csv("/public/retail_db/products")
+
+orders.createOrReplaceTempView("orderstab")
+orderitems.createOrReplaceTempView("orderitemstab")
+products.createOrReplaceTempView("productstab")
+
+order_revenue=spark.sql("select product_id,product_name,order_date,round(sum(order_item_subtotal),2) as revenue "\
+"from orderitemstab oi join orderstab o on(oi.order_item_order_id=o.order_id and o.order_status in ('CLOSED','COMPLETE')) "\
+"join productstab p on (oi.order_item_product_id=p.product_id) "\
+"group by product_id,product_name,order_date order by order_date desc")
+
+
 	
 
 
