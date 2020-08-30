@@ -10,7 +10,7 @@ eg:
 
 3. In Python3 map and filter returns respective objects  which is not iterable  while in Python2 they returns list 
 
-4.Generic custome map,reduce,filter functions:
+4.Generic custom map,reduce,filter functions:
 
 Structure of generic filter,map and reduce is as below:
 
@@ -70,6 +70,8 @@ def add(a, b):
 
 for item in starmap(add, [(2,3), (4,5)]):
 	print(item)
+	
+
 
 6.Numpy:
 **********
@@ -242,7 +244,7 @@ array([nan,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.])
 
 6.Pandas :
 
->>Confuring Pandas
+>>Configuring Pandas
 
 
 Pandas can be installed using pip or pip3 as below:
@@ -653,3 +655,20 @@ pd.merge() or DataFrame.merge():
 
 This is similar to join operation in SQL
                                                     
+													
+													
+													
+File Read and Write
+*********************
+
+https://stackoverflow.com/questions/1466000/python-open-built-in-function-difference-between-modes-a-a-w-w-and-r 
+
+                 | r   r+   w   w+   a   a+
+------------------|--------------------------
+read              | +   +        +        +
+write             |     +    +   +    +   +
+write after seek  |     +    +   +
+create            |          +   +    +   +
+truncate          |          +   +
+position at start | +   +    +   +
+position at end   |                   +   

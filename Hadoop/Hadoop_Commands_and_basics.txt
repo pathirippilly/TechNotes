@@ -518,7 +518,7 @@ sqoop export \
 --password itversity \
 --table dly_rev_akhil \
 --export-dir /apps/hive/warehouse/pathirippilly_sqoop_import.db/daily_revenue \
---input-fields-terminated-by "\001" \
+--input-fields-terminated-by "\001" \ 
 --update-mode updateonly \ 
 --update-key Day
 
@@ -542,6 +542,9 @@ sqoop export \
 
 
 
+Connecting to mysql in itversity cluster
 
+mysql -u retail_user -h ms.itversity.com -p
+pwd:itversity
 
-
+jdbc:hive2://nn01.itversity.com:2181,nn02.itversity.com:2181,rm01.itversity.com:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2
